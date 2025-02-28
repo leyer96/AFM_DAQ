@@ -11,7 +11,7 @@ from PySide6.QtWidgets import(
 from PySide6.QtCore import QThreadPool
 from threading import Thread
 from plot_utils import calculate_grid_values
-from plot_dialog import PlotDialog
+# from plot_dialog import PlotDialog
 from utils import Paths
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
