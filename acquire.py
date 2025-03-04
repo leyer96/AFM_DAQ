@@ -12,7 +12,7 @@ from PySide6.QtWidgets import(
 )
 from PySide6.QtCore import QThreadPool, QTimer
 from PySide6.QtGui import QIcon
-from acquisition_thread import AcquisitionThread
+# from acquisition_thread import AcquisitionThread
 from utils import Paths
 import pyqtgraph as pg
 import numpy as np
@@ -43,23 +43,29 @@ class AcquireTab(QWidget):
         self.plots = np.zeros(1)
 
         # CONFIG
+        # THREADS
         self.threadpool = QThreadPool()
+        ## PLOT
         self.plot_widget.setXRange(1,100)
+        ## INPUTS
         self.n_channels_input.setRange(-10,10)
+        self.n_channels_input.setValue(1)
         self.channel_selection_input.addItems(["All","Dev1/ai0", "Dev1/ai1", "Dev1/ai2", "Dev1/ai3", "Dev1/ai4", "Dev1/ai5"])
-        self.sample_rate_input.setRange(0,999999)
+        self.sample_rate_input.setValue(1000)
+        self.sample_rate_input.setRange(0,100*1000)
         self.min_input_value_input.setRange(-10,10)
         self.min_input_value_input.setValue(-10)
         self.max_input_value_input.setRange(-10,10)
-        self.min_input_value_input.setValue(10)
-        self.sample_rate_input.setValue(1000)
+        self.max_input_value_input.setValue(10)
         self.n_samples_input.setRange(0,999999)
         self.n_samples_input.setValue(1000)
+        ## ICONS
         record_btn.setIcon(QIcon(Paths.icon("control-record.png")))
         stop_btn.setIcon(QIcon(Paths.icon("control-stop-square.png")))
 
         # SIGNALS
         self.n_channels_input.valueChanged.connect(self.set_n_of_channels)
+        self.min_input_value_input.valueChanged.connect(self.set_max_input)
 
         #LAYOUT
         form = QFormLayout()
@@ -67,7 +73,7 @@ class AcquireTab(QWidget):
         form.addRow("Plot channel", self.channel_selection_input)
         form.addRow("Min. Value", self.min_input_value_input)
         form.addRow("Max. Value", self.max_input_value_input)
-        form.addRow("Sample Rate", self.sample_rate_input)
+        form.addRow("DAQ Sample Rate", self.sample_rate_input)
         form.addRow("Number of Samples", self.n_samples_input)
         form.addRow("Number of Cicles", self.n_cicles_input)
         form.addRow("Filename", self.filename_input)
@@ -81,39 +87,46 @@ class AcquireTab(QWidget):
         
         ##TEST
         self.plot_widget.setYRange(-1,1)
-        self.n_channels_input.valueChanged.connect(self.prepare_for_plotting)
+        # self.acquisition_thread = AcquisitionThread()
+        # self.acquisition_thread.data.connect(self.on_new_data)
         self.curve = self.plot_widget.plot(self.channels_data, pen='y')
-        self.acquisition_thread = AcquisitionThread()
-        self.acquisition_thread.data.connect(self.on_new_data)
         record_btn.clicked.connect(self.start_acquisition)
         stop_btn.clicked.connect(self.stop_acquisition)
-        self.channel_data = np.array([])
         self.prev_data = np.array([])
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_plot)
         self.timer.start(1000)
     
-    def set_n_channels(self,n):
-        self.channels_data = np.zeros((n,1))
-        self.plots = np.zeros((n,1))
+    def set_n_of_channels(self,n):
+        arr = [[] for _ in range(n)]
+        self.channels_data = np.array(arr)
+        self.prev_data = np.array(arr)
+        self.plots = np.zeros((self.channels_data.shape[1],1000)) # CAMBIAR 1000
+
+    def set_max_input(self,min):
+        self.max_input_value_input.setMinimum(min)
     
     def start_acquisition(self):
-        self.acquisition_thread.start()
+        min_v = self.min_input_value_input.value()
+        max_v = self.max_input_value_input.value()
+        sample_rate = self.sample_rate_input.value()
+        n_samples = self.n_samples_input.value()
+        self.acquisition_thread.start(min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=n_samples)
 
     def stop_acquisition(self):
         if self.acquisition_thread.is_running:
             self.acquisition_thread.stop()
 
     def update_plot(self):
-        print(f"1000 ms data differnece: {self.channel_data.size - self.prev_data.size}")
-        self.prev_data = self.channel_data
-        # new_value = np.random.uniform(-1, 1)
-        # self.channels_data = np.roll(self.channels_data, -1)
-        # self.channels_data[-1] = new_value
-        # self.curve.setData(self.channels_data)
+        new_data = self.channels_data
+        delta = new_data.shape[1] - self.prev_data.shape[1]
+        self.plots = np.roll(self.plots, -delta)
+        self.plots[::,-delta] = new_data[::,-delta]
+        self.prev_data = self.channels_data
+        self.curve.setData(self.plots)
 
     def on_new_data(self, data):
-        self.channel_data = np.concatenate((self.channel_data,data))
+        self.channels_data = np.concatenate((self.channel_data,data),axis=1)
 
 
     # def acquire_and_save_data(self):
