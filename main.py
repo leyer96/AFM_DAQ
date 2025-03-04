@@ -1,5 +1,5 @@
-from nidaqmx import Task
-from nidaqmx.constants import TerminalConfiguration
+# from nidaqmx import Task
+# from nidaqmx.constants import TerminalConfiguration
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,

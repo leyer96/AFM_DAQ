@@ -10,7 +10,7 @@ def load_data(path, rows_to_skip=0):
     return data
 
 def get_signal_indexes_numpy(data):
-    indexes = np.nonzero(np.absolute(np.diff(data)) > 2)[0]
+    indexes = np.nonzero(np.absolute(np.diff(data)) > 1)[0]
     indexes[::2] += 1
     return indexes
 
