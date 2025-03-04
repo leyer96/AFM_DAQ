@@ -1,5 +1,3 @@
-# from nidaqmx import Task
-# from nidaqmx.constants import TerminalConfiguration
 from threading import Thread
 from PySide6.QtWidgets import(
     QComboBox,
@@ -14,6 +12,7 @@ from PySide6.QtWidgets import(
 )
 from PySide6.QtCore import QThreadPool, QTimer
 from PySide6.QtGui import QIcon
+from acquisition_thread import AcquisitionThread
 from utils import Paths
 import pyqtgraph as pg
 import numpy as np
@@ -40,16 +39,19 @@ class AcquireTab(QWidget):
         stop_btn = QPushButton("STOP")
         
         # DATA
-        self.channels_data = np.zeros(100)
-        self.plot_refs = []
+        self.channels_data = np.zeros(1)
+        self.plots = np.zeros(1)
 
         # CONFIG
         self.threadpool = QThreadPool()
-        self.is_running = False
         self.plot_widget.setXRange(1,100)
-        self.n_channels_input.setRange(1,10)
+        self.n_channels_input.setRange(-10,10)
         self.channel_selection_input.addItems(["All","Dev1/ai0", "Dev1/ai1", "Dev1/ai2", "Dev1/ai3", "Dev1/ai4", "Dev1/ai5"])
         self.sample_rate_input.setRange(0,999999)
+        self.min_input_value_input.setRange(-10,10)
+        self.min_input_value_input.setValue(-10)
+        self.max_input_value_input.setRange(-10,10)
+        self.min_input_value_input.setValue(10)
         self.sample_rate_input.setValue(1000)
         self.n_samples_input.setRange(0,999999)
         self.n_samples_input.setValue(1000)
@@ -57,7 +59,7 @@ class AcquireTab(QWidget):
         stop_btn.setIcon(QIcon(Paths.icon("control-stop-square.png")))
 
         # SIGNALS
-        record_btn.clicked.connect(self.capture_data)
+        self.n_channels_input.valueChanged.connect(self.set_n_of_channels)
 
         #LAYOUT
         form = QFormLayout()
@@ -81,45 +83,38 @@ class AcquireTab(QWidget):
         self.plot_widget.setYRange(-1,1)
         self.n_channels_input.valueChanged.connect(self.prepare_for_plotting)
         self.curve = self.plot_widget.plot(self.channels_data, pen='y')
-        # record_btn.clicked.connect(self.start_plotting)
-        # stop_btn.clicked.connect(self.set_running_off)
+        self.acquisition_thread = AcquisitionThread()
+        self.acquisition_thread.data.connect(self.on_new_data)
+        record_btn.clicked.connect(self.start_acquisition)
+        stop_btn.clicked.connect(self.stop_acquisition)
+        self.channel_data = np.array([])
+        self.prev_data = np.array([])
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_plot)
-        self.timer.start(100)
-
+        self.timer.start(1000)
     
-    def capture_data(self):
-        pass
+    def set_n_channels(self,n):
+        self.channels_data = np.zeros((n,1))
+        self.plots = np.zeros((n,1))
     
-    def prepare_for_plotting(self):
-        pass
-        # n_channels = self.n_channels_input.value()
-        # n_existing_channels = len(self.channels_data)
-        # if n_channels > n_existing_channels:
-        #     for i in range(n_channels - n_existing_channels):
-        #         self.channels_data.append([])
-        # elif n_channels < n_existing_channels:
-        #     self.channels_data[0:n_channels]
-        #     self.plots_refs = self.plots_refs[0:n_channels]
+    def start_acquisition(self):
+        self.acquisition_thread.start()
 
-    def start_plotting(self):
-        self.threadpool.start(self.simulate_data)
+    def stop_acquisition(self):
+        if self.acquisition_thread.is_running:
+            self.acquisition_thread.stop()
 
     def update_plot(self):
-        new_value = np.random.uniform(-1, 1)
-        self.channels_data = np.roll(self.channels_data, -1)
-        self.channels_data[-1] = new_value
-        self.curve.setData(self.channels_data)
-            
-    def set_running_off(self):
-        self.is_running = False
-            
-    def configure_daq(self):
-        pass
-        # self.task = Task()
-        # for channel in self.channels[:self.num_channels_var.value()]:  # Select first 6 channels
-        #     self.task.ai_channels.add_ai_voltage_chan(channel, min_val=-10.0, max_val=10.0, terminal_config=TerminalConfiguration.RSE)
-        # self.task.timing.cfg_samp_clk_timing(self.sample_rate_var.value())
+        print(f"1000 ms data differnece: {self.channel_data.size - self.prev_data.size}")
+        self.prev_data = self.channel_data
+        # new_value = np.random.uniform(-1, 1)
+        # self.channels_data = np.roll(self.channels_data, -1)
+        # self.channels_data[-1] = new_value
+        # self.curve.setData(self.channels_data)
+
+    def on_new_data(self, data):
+        self.channel_data = np.concatenate((self.channel_data,data))
+
 
     # def acquire_and_save_data(self):
     #     with open(self.file_path, 'w', newline='') as csvfile:
@@ -162,6 +157,3 @@ class AcquireTab(QWidget):
     #     self.task.stop()
     #     self.task.close()
     #     print("Acquisition stopped.")
-
-    def exit_application(self):
-        self.master.destroy()
