@@ -12,7 +12,7 @@ from PySide6.QtWidgets import(
 )
 from PySide6.QtCore import QThreadPool, QTimer
 from PySide6.QtGui import QIcon
-# from acquisition_thread import AcquisitionThread
+from acquisition_thread import AcquisitionThread
 from utils import Paths
 import pyqtgraph as pg
 import numpy as np
@@ -39,14 +39,15 @@ class AcquireTab(QWidget):
         stop_btn = QPushButton("STOP")
         
         # DATA
-        self.channels_data = np.zeros(1)
-        self.plots = np.zeros(1)
+        self.channels_data = np.array([])
+        self.plots = np.zeros(100) # CAMBIAR
 
         # CONFIG
         # THREADS
         self.threadpool = QThreadPool()
         ## PLOT
-        self.plot_widget.setXRange(1,100)
+        # self.plot_widget.setXRange(1,100)
+        # self.plot_widget.setYRange(-0.4,0.4)
         ## INPUTS
         self.n_channels_input.setRange(-10,10)
         self.n_channels_input.setValue(1)
@@ -86,22 +87,22 @@ class AcquireTab(QWidget):
         self.setLayout(layout)
         
         ##TEST
-        self.plot_widget.setYRange(-1,1)
-        # self.acquisition_thread = AcquisitionThread()
-        # self.acquisition_thread.data.connect(self.on_new_data)
+        self.plot_widget.setXRange(1,100)
+        self.plot_widget.setYRange(-0.4,0.4)
         self.curve = self.plot_widget.plot(self.channels_data, pen='y')
         record_btn.clicked.connect(self.start_acquisition)
         stop_btn.clicked.connect(self.stop_acquisition)
         self.prev_data = np.array([])
+        self.is_running = False
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_plot)
-        self.timer.start(1000)
+        self.timer.start(100)
     
     def set_n_of_channels(self,n):
         arr = [[] for _ in range(n)]
         self.channels_data = np.array(arr)
         self.prev_data = np.array(arr)
-        self.plots = np.zeros((self.channels_data.shape[1],1000)) # CAMBIAR 1000
+        self.plots = np.zeros((self.channels_data.shape[1],100)) # CAMBIAR
 
     def set_max_input(self,min):
         self.max_input_value_input.setMinimum(min)
@@ -111,22 +112,35 @@ class AcquireTab(QWidget):
         max_v = self.max_input_value_input.value()
         sample_rate = self.sample_rate_input.value()
         n_samples = self.n_samples_input.value()
-        self.acquisition_thread.start(min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=n_samples)
+        self.acquisition_thread = AcquisitionThread(min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=1)
+        self.acquisition_thread.data.connect(self.on_new_data)
+        self.acquisition_thread.start()
+        self.is_running = True
 
     def stop_acquisition(self):
         if self.acquisition_thread.is_running:
             self.acquisition_thread.stop()
+            self.is_running = False
 
     def update_plot(self):
         new_data = self.channels_data
-        delta = new_data.shape[1] - self.prev_data.shape[1]
-        self.plots = np.roll(self.plots, -delta)
-        self.plots[::,-delta] = new_data[::,-delta]
-        self.prev_data = self.channels_data
-        self.curve.setData(self.plots)
+        if self.is_running:
+            try:
+                delta = new_data.shape[1] - self.prev_data.shape[1]
+                self.plots = np.roll(self.plots, -delta)
+                self.plots[::,-delta] = new_data[::,-delta]
+            except IndexError:
+                delta = new_data.size - self.prev_data.size
+                self.plots = np.roll(self.plots, -delta)
+                self.plots[-delta:] = new_data[-delta:]
+            self.prev_data = new_data
+            self.curve.setData(self.plots)
 
     def on_new_data(self, data):
-        self.channels_data = np.concatenate((self.channel_data,data),axis=1)
+        try:
+            self.channels_data = np.concatenate((self.channels_data,data),axis=1)
+        except np.exceptions.AxisError:
+            self.channels_data = np.concatenate((self.channels_data,data))
 
 
     # def acquire_and_save_data(self):
