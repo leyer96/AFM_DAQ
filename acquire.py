@@ -1,8 +1,10 @@
 from threading import Thread
 from PySide6.QtWidgets import(
+    QCheckBox,
     QComboBox,
     QDoubleSpinBox,
     QFormLayout,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
@@ -10,21 +12,23 @@ from PySide6.QtWidgets import(
     QVBoxLayout,
     QWidget
 )
-from PySide6.QtCore import QThreadPool, QTimer
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon
-from acquisition_thread import AcquisitionThread
+# from acquisition_thread import AcquisitionThread
+from widgets import ConnectionStatusIndicator
 from utils import Paths
 import pyqtgraph as pg
 import numpy as np
-import csv
-## TEST
-import random
-import time
+
 
 class AcquireTab(QWidget):
     def __init__(self):
         super().__init__()
-        # WIDGETS
+        # ---- WIDGETS ---- #
+        ## PLOT WIDGET
+        self.plot_widget = pg.PlotWidget()
+        self.stream_data_option = QCheckBox("Stream data")
+        ## DAQ CONFIG INPUT WIDGETS
         self.n_channels_input = QSpinBox() 
         self.channel_selection_input = QComboBox()
         self.min_input_value_input = QDoubleSpinBox()
@@ -33,21 +37,19 @@ class AcquireTab(QWidget):
         self.n_samples_input = QSpinBox()
         self.n_cicles_input = QSpinBox()
         self.n_cicles = QLabel()
+        ## RECORDING CONTROLS
         self.filename_input = QLineEdit(text="datos_daq.csv")
-        self.plot_widget = pg.PlotWidget()
         record_btn = QPushButton("RECORD")
         stop_btn = QPushButton("STOP")
         
-        # DATA
+        # ---- DATA ---- #
         self.channels_data = np.array([])
         self.plots = np.zeros(100) # CAMBIAR
 
-        # CONFIG
-        # THREADS
-        self.threadpool = QThreadPool()
+        # ---- CONFIG ---- #
+        self.DAQ_connected = False
+        ## THREADS
         ## PLOT
-        # self.plot_widget.setXRange(1,100)
-        # self.plot_widget.setYRange(-0.4,0.4)
         ## INPUTS
         self.n_channels_input.setRange(-10,10)
         self.n_channels_input.setValue(1)
@@ -64,11 +66,12 @@ class AcquireTab(QWidget):
         record_btn.setIcon(QIcon(Paths.icon("control-record.png")))
         stop_btn.setIcon(QIcon(Paths.icon("control-stop-square.png")))
 
-        # SIGNALS
+        # ---- SIGNALS ---- #
         self.n_channels_input.valueChanged.connect(self.set_n_of_channels)
         self.min_input_value_input.valueChanged.connect(self.set_max_input)
 
-        #LAYOUT
+        # ---- LAYOUT ---- #
+        ## FORM - DAQ CONFIG
         form = QFormLayout()
         form.addRow("Number of channels to acquire", self.n_channels_input)
         form.addRow("Plot channel", self.channel_selection_input)
@@ -78,15 +81,17 @@ class AcquireTab(QWidget):
         form.addRow("Number of Samples", self.n_samples_input)
         form.addRow("Number of Cicles", self.n_cicles_input)
         form.addRow("Filename", self.filename_input)
+        ## MAIN LAYOUT
         layout = QVBoxLayout()
         layout.addWidget(self.plot_widget)
+        layout.addWidget(self.stream_data_option)
         layout.addLayout(form)
         layout.addWidget(record_btn)
         layout.addWidget(stop_btn)
 
         self.setLayout(layout)
         
-        ##TEST
+        # ---- TEST ---- #
         self.plot_widget.setXRange(1,100)
         self.plot_widget.setYRange(-0.4,0.4)
         self.curve = self.plot_widget.plot(self.channels_data, pen='y')
@@ -94,9 +99,14 @@ class AcquireTab(QWidget):
         stop_btn.clicked.connect(self.stop_acquisition)
         self.prev_data = np.array([])
         self.is_running = False
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update_plot)
-        self.timer.start(100)
+        self.plot_timer = QTimer(self)
+        self.plot_timer.timeout.connect(self.update_plot)
+        self.plot_timer.start(100)
+        self.connection_timer = QTimer(self)
+        self.connection_timer.timeout.connect(self.check_connection_status)
+        self.connection_timer.start(3000)
+        # ----- TEST -----
+
     
     def set_n_of_channels(self,n):
         arr = [[] for _ in range(n)]
@@ -108,11 +118,12 @@ class AcquireTab(QWidget):
         self.max_input_value_input.setMinimum(min)
     
     def start_acquisition(self):
+        n_channels = self.n_channels_input.value()
         min_v = self.min_input_value_input.value()
         max_v = self.max_input_value_input.value()
         sample_rate = self.sample_rate_input.value()
         n_samples = self.n_samples_input.value()
-        self.acquisition_thread = AcquisitionThread(min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=1)
+        # self.acquisition_thread = AcquisitionThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=1)
         self.acquisition_thread.data.connect(self.on_new_data)
         self.acquisition_thread.start()
         self.is_running = True
@@ -124,7 +135,7 @@ class AcquireTab(QWidget):
 
     def update_plot(self):
         new_data = self.channels_data
-        if self.is_running:
+        if self.stream_data_option.isChecked():
             try:
                 delta = new_data.shape[1] - self.prev_data.shape[1]
                 self.plots = np.roll(self.plots, -delta)
@@ -141,46 +152,3 @@ class AcquireTab(QWidget):
             self.channels_data = np.concatenate((self.channels_data,data),axis=1)
         except np.exceptions.AxisError:
             self.channels_data = np.concatenate((self.channels_data,data))
-
-
-    # def acquire_and_save_data(self):
-    #     with open(self.file_path, 'w', newline='') as csvfile:
-    #         csv_writer = csv.writer(csvfile)
-    #         headers = [f"Channel_{i+1}" for i in range(self.num_channels_var.value())]
-    #         csv_writer.writerow(headers)
-
-    #     while self.is_running:
-    #         data = self.task.read(number_of_samples_per_channel=1)
-    #         with open(self.file_path, 'a', newline='') as csvfile:
-    #             csv_writer = csv.writer(csvfile)
-    #             csv_writer.writerow([float(e[0]) for e in data])
-    #             self.update_plot(data)
-
-    # def update_plot(self, new_data):
-    #     for i, d in enumerate(new_data):
-    #         if i < self.num_channels_var.value():
-    #             self.channel_data[i].append(float(d[0]))
-    #             if len(self.channel_data[i]) > len(self.channel_data[0]):
-    #                 self.channel_data[i].pop(0)  # Remove oldest data point
-    #             if len(self.lines) < self.num_channels_var.value():
-    #                 line, = self.ax.plot([], [], color=self.colors[i], label=f'Channel {i+1}')
-    #                 self.lines.append(line)
-    #             self.lines[i].set_data(range(len(self.channel_data[0])), self.channel_data[i])
-    #     self.ax.relim()
-    #     self.ax.autoscale_view()
-    #     self.ax.legend()
-    #     self.canvas.draw()
-
-    # def start_acquisition(self):
-    #     self.file_path = self.filename_var.text()
-    #     self.configure_daq()
-    #     self.is_running = True
-    #     self.acquisition_thread = Thread(target=self.acquire_and_save_data)
-    #     self.acquisition_thread.start()
-
-    # def stop_acquisition(self):
-    #     self.is_running = False
-    #     self.acquisition_thread.join()
-    #     self.task.stop()
-    #     self.task.close()
-    #     print("Acquisition stopped.")
