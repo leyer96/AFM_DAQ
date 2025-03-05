@@ -14,7 +14,7 @@ from PySide6.QtWidgets import(
 )
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon
-# from acquisition_thread import AcquisitionThread
+from acquisition_thread import AcquisitionThread
 from widgets import ConnectionStatusIndicator
 from utils import Paths
 import pyqtgraph as pg
@@ -44,7 +44,7 @@ class AcquireTab(QWidget):
         
         # ---- DATA ---- #
         self.channels_data = np.array([])
-        self.plots = np.zeros(100) # CAMBIAR
+        self.plots = np.zeros(200) # CAMBIAR
 
         # ---- CONFIG ---- #
         self.DAQ_connected = False
@@ -94,7 +94,7 @@ class AcquireTab(QWidget):
         # ---- TEST ---- #
         self.plot_widget.setXRange(1,100)
         self.plot_widget.setYRange(-0.4,0.4)
-        self.curve = self.plot_widget.plot(self.channels_data, pen='y')
+        self.plots_refs = [self.plot_widget.plot(np.array([]), pen="y")] # CREAR PEN ANTES
         record_btn.clicked.connect(self.start_acquisition)
         stop_btn.clicked.connect(self.stop_acquisition)
         self.prev_data = np.array([])
@@ -102,17 +102,15 @@ class AcquireTab(QWidget):
         self.plot_timer = QTimer(self)
         self.plot_timer.timeout.connect(self.update_plot)
         self.plot_timer.start(100)
-        self.connection_timer = QTimer(self)
-        self.connection_timer.timeout.connect(self.check_connection_status)
-        self.connection_timer.start(3000)
         # ----- TEST -----
 
-    
     def set_n_of_channels(self,n):
         arr = [[] for _ in range(n)]
         self.channels_data = np.array(arr)
         self.prev_data = np.array(arr)
-        self.plots = np.zeros((self.channels_data.shape[1],100)) # CAMBIAR
+        self.plots = np.zeros((n,200)) # CAMBIAR
+        colors = ["y","g","b", "r"]
+        self.plots_refs = [self.plot_widget.plot(np.array([]), pen=colors[i]) for i in range(n)]
 
     def set_max_input(self,min):
         self.max_input_value_input.setMinimum(min)
@@ -123,7 +121,7 @@ class AcquireTab(QWidget):
         max_v = self.max_input_value_input.value()
         sample_rate = self.sample_rate_input.value()
         n_samples = self.n_samples_input.value()
-        # self.acquisition_thread = AcquisitionThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=1)
+        self.acquisition_thread = AcquisitionThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=1)
         self.acquisition_thread.data.connect(self.on_new_data)
         self.acquisition_thread.start()
         self.is_running = True
@@ -134,21 +132,24 @@ class AcquireTab(QWidget):
             self.is_running = False
 
     def update_plot(self):
-        new_data = self.channels_data
         if self.stream_data_option.isChecked():
+            updated_data = self.channels_data
             try:
-                delta = new_data.shape[1] - self.prev_data.shape[1]
+                delta = updated_data.shape[1] - self.prev_data.shape[1]
                 self.plots = np.roll(self.plots, -delta)
-                self.plots[::,-delta] = new_data[::,-delta]
+                new_data = updated_data[::,-delta]
+                self.plots[::,-delta] = new_data
+                for i in range(len(self.plots_refs)):
+                    self.plots_refs[i].setData(self.plots[i])
             except IndexError:
-                delta = new_data.size - self.prev_data.size
+                delta = updated_data.size - self.prev_data.size
                 self.plots = np.roll(self.plots, -delta)
-                self.plots[-delta:] = new_data[-delta:]
-            self.prev_data = new_data
-            self.curve.setData(self.plots)
+                self.plots[-delta:] = updated_data[-delta:]
+                self.plots_refs[0].setData(self.plots)
+            self.prev_data = updated_data
 
     def on_new_data(self, data):
         try:
             self.channels_data = np.concatenate((self.channels_data,data),axis=1)
         except np.exceptions.AxisError:
-            self.channels_data = np.concatenate((self.channels_data,data))
+            self.channels_data = np.concatenate((self.channels_data,data[0]))
