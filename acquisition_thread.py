@@ -12,15 +12,17 @@ class AcquisitionThread(QThread):
             self.task.ai_channels.add_ai_voltage_chan(AI_CHANNELS[i], min_val=min_v, max_val=max_v, terminal_config=TerminalConfiguration.RSE)
         self.task.timing.cfg_samp_clk_timing(sample_rate, sample_mode=AcquisitionType.CONTINUOUS)
         self.is_running = True
-        self.data_arr = []
+        self.data_arr = np.array([] for _ in range(n_channels))
         self.n_samples = n_samples
+        self.n_channels = n_channels
     
     @Slot()
     def run(self):
         try:
             while True:
-                data = self.task.read(number_of_samples_per_channel=self.n_samples)
-                self.data_arr = np.concatenate((self.data_arr,data))
+                # data = self.task.read(number_of_samples_per_channel=self.n_samples)
+                data = np.reshape(self.task.read(), (self.n_channels,1))
+                # self.data_arr = np.concatenate((self.data_arr,data))
                 self.data.emit(data)
                 if not self.is_running:
                     return
