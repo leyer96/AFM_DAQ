@@ -3,8 +3,8 @@ from PySide6.QtWidgets import(
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
+    QFileDialog,
     QFormLayout,
-    QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
@@ -14,11 +14,12 @@ from PySide6.QtWidgets import(
 )
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon
-from acquisition_thread import AcquisitionThread
+# from acquisition_thread import AcquisitionThread
 from widgets import ConnectionStatusIndicator
 from utils import Paths
 import pyqtgraph as pg
 import numpy as np
+import pandas as pd
 
 
 class AcquireTab(QWidget):
@@ -39,17 +40,24 @@ class AcquireTab(QWidget):
         self.n_cicles = QLabel()
         ## RECORDING CONTROLS
         self.filename_input = QLineEdit(text="datos_daq.csv")
-        record_btn = QPushButton("RECORD")
+        self.record_btn = QPushButton("RECORD")
         stop_btn = QPushButton("STOP")
         
         # ---- DATA ---- #
         self.channels_data = np.array([])
-        self.plots = np.zeros(200) # CAMBIAR
+        self.plots_data = np.zeros(1000)
+        self.plots_refs = [self.plot_widget.plot(np.array([]), pen="y")] # CREAR PEN ANTES
 
         # ---- CONFIG ---- #
         self.DAQ_connected = False
-        ## THREADS
+        self.is_recording = False
+        ## THREADS & TIMER
+        self.plot_timer = QTimer(self)
+        self.plot_timer.timeout.connect(self.update_plot)
+        self.plot_timer.start(100)
         ## PLOT
+        self.plot_widget.setXRange(1,100)
+        self.plot_widget.setYRange(-0.4,0.4)
         ## INPUTS
         self.n_channels_input.setRange(-10,10)
         self.n_channels_input.setValue(1)
@@ -63,12 +71,15 @@ class AcquireTab(QWidget):
         self.n_samples_input.setRange(0,999999)
         self.n_samples_input.setValue(1000)
         ## ICONS
-        record_btn.setIcon(QIcon(Paths.icon("control-record.png")))
+        self.record_btn.setIcon(QIcon(Paths.icon("control-record.png")))
         stop_btn.setIcon(QIcon(Paths.icon("control-stop-square.png")))
 
         # ---- SIGNALS ---- #
+        self.stream_data_option.toggled.connect(self.toggle_stream)
         self.n_channels_input.valueChanged.connect(self.set_n_of_channels)
         self.min_input_value_input.valueChanged.connect(self.set_max_input)
+        self.record_btn.clicked.connect(self.start_recording)
+        stop_btn.clicked.connect(self.stop_recording)
 
         # ---- LAYOUT ---- #
         ## FORM - DAQ CONFIG
@@ -86,34 +97,30 @@ class AcquireTab(QWidget):
         layout.addWidget(self.plot_widget)
         layout.addWidget(self.stream_data_option)
         layout.addLayout(form)
-        layout.addWidget(record_btn)
+        layout.addWidget(self.record_btn)
         layout.addWidget(stop_btn)
 
         self.setLayout(layout)
         
         # ---- TEST ---- #
-        self.plot_widget.setXRange(1,100)
-        self.plot_widget.setYRange(-0.4,0.4)
-        self.plots_refs = [self.plot_widget.plot(np.array([]), pen="y")] # CREAR PEN ANTES
-        record_btn.clicked.connect(self.start_acquisition)
-        stop_btn.clicked.connect(self.stop_acquisition)
-        self.prev_data = np.array([])
-        self.is_running = False
-        self.plot_timer = QTimer(self)
-        self.plot_timer.timeout.connect(self.update_plot)
-        self.plot_timer.start(100)
+
         # ----- TEST -----
 
     def set_n_of_channels(self,n):
         arr = [[] for _ in range(n)]
         self.channels_data = np.array(arr)
-        self.prev_data = np.array(arr)
-        self.plots = np.zeros((n,200)) # CAMBIAR
-        colors = ["y","g","b", "r"]
+        self.curr_plot_data = np.zeros((n,1000)) # CAMBIAR
+        colors = ["y","g","b","r"]
         self.plots_refs = [self.plot_widget.plot(np.array([]), pen=colors[i]) for i in range(n)]
 
     def set_max_input(self,min):
         self.max_input_value_input.setMinimum(min)
+
+    def toggle_stream(self, checked):
+        if checked:
+            self.start_acquisition()
+        else:
+            self.stop_acquisition()
     
     def start_acquisition(self):
         n_channels = self.n_channels_input.value()
@@ -121,35 +128,47 @@ class AcquireTab(QWidget):
         max_v = self.max_input_value_input.value()
         sample_rate = self.sample_rate_input.value()
         n_samples = self.n_samples_input.value()
-        self.acquisition_thread = AcquisitionThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=1)
+        # self.acquisition_thread = AcquisitionThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=1)
         self.acquisition_thread.data.connect(self.on_new_data)
         self.acquisition_thread.start()
-        self.is_running = True
 
     def stop_acquisition(self):
-        if self.acquisition_thread.is_running:
-            self.acquisition_thread.stop()
-            self.is_running = False
+        self.acquisition_thread.stop()
+
+    def start_recording(self):
+        self.is_recording = True
+        self.record_btn.setEnabled(False)
+
+    def stop_recording(self):
+        # TEST 
+        self.is_recording = False
+        cols = ["Dev1/ai"+i for i in range(len(self.plots_refs))]
+        data = self.channels_data
+        df = pd.DataFrame(data,columns=cols)
+        fn = "test.csv"
+        dirname = QFileDialog.getExistingDirectory(self)
+        if dirname:
+            path = dirname + fn
+            df.to_csv(path,index=False)
+        n = self.n_channels_input.value()
+        self.channels_data = np.array([[] for _ in range(n)])
+        self.record_btn.setEnabled(True)
 
     def update_plot(self):
         if self.stream_data_option.isChecked():
-            updated_data = self.channels_data
-            try:
-                delta = updated_data.shape[1] - self.prev_data.shape[1]
-                self.plots = np.roll(self.plots, -delta)
-                new_data = updated_data[::,-delta]
-                self.plots[::,-delta] = new_data
-                for i in range(len(self.plots_refs)):
-                    self.plots_refs[i].setData(self.plots[i])
-            except IndexError:
-                delta = updated_data.size - self.prev_data.size
-                self.plots = np.roll(self.plots, -delta)
-                self.plots[-delta:] = updated_data[-delta:]
-                self.plots_refs[0].setData(self.plots)
-            self.prev_data = updated_data
+            for i in range(len(self.plots_refs)):
+                self.plots_refs[i].setData(self.plots_data[i]) # REVISAR FUNCIONAMIENTO 1 SOLO PLOT
 
-    def on_new_data(self, data):
+    def on_new_data(self, new_data):
+        # REVISAR
+        n = len(new_data)
+        self.plot_data = np.roll(self.plot_data, -n)
         try:
-            self.channels_data = np.concatenate((self.channels_data,data),axis=1)
-        except np.exceptions.AxisError:
-            self.channels_data = np.concatenate((self.channels_data,data[0]))
+            self.plot_data[::,-n] = new_data
+        except IndexError:
+            self.plot_data[-n:] = new_data
+        if self.is_recording:
+            try:
+                self.channels_data = np.concatenate((self.channels_data,new_data),axis=1)
+            except np.exceptions.AxisError:
+                self.channels_data = np.concatenate((self.channels_data,new_data[0]))
