@@ -14,7 +14,7 @@ def get_signal_indexes_numpy(data):
     indexes[::2] += 1
     return indexes
 
-def calculate_grid_values(path,rows_to_skip=0): 
+def calculate_grid_values(path,op=0,rows_to_skip=0): 
     # LOAD
     data = load_data(path,rows_to_skip)
     frame_data = data["Dev1/ai0"].to_numpy()
@@ -39,10 +39,11 @@ def calculate_grid_values(path,rows_to_skip=0):
             [pixel_indexes[pixel_indexes >= start][0],pixel_indexes[pixel_indexes <= end][-1]] for start,end in line_indexes_stack
             ])
     pixel_indexes_stack = pixel_indexes_stack[1:]
-    # HEIGHT
-    height_data = height_data[fs:fe]
-    Z = np.mean(np.array([np.hsplit(height_data[index_stack[0]:index_stack[0]+int(17000/res)*res],res) for index_stack in pixel_indexes_stack]),axis=2)
-    Z = remove_linear_trend(Z)
+    if op == 0:
+        # HEIGHT
+        height_data = height_data[fs:fe]
+        Z = np.mean(np.array([np.hsplit(height_data[index_stack[0]:index_stack[0]+(17000//res)*res],res) for index_stack in pixel_indexes_stack]),axis=2) # REV
+        Z = remove_linear_trend(Z)
     return Z
 
 def remove_linear_trend(Z):
