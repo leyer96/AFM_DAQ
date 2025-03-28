@@ -27,14 +27,14 @@ class VisualizeTab(QWidget):
         self.path_input = QLineEdit()
         choose_path_btn = QPushButton("Select Data")
         self.plot_op = QComboBox()
-        self.plot_widget = pg.PlotWidget()
-        self.plot_item = self.plot_widget.getPlotItem()
-        # self.canvas_widget.setBackgroundColor("#edecec")
-        # self.plot_widget.setBackgroundColor("black")
+        # self.plot_widget = pg.PlotWidget()
+        self.plot_widget = pg.GraphicsLayoutWidget()
 
         # CONFIG
-        self.plot_op.addItems(["Topography", "PE"])
+        self.plot_op.addItems(["Topography", "PFM"])
         self.path_input.setEnabled(False)
+        # self.plot_widget.getPlotItem().getAxis('bottom').setVisible(False)
+        # self.plot_widget.getPlotItem().getAxis('left').setVisible(False)
 
         # SIGNALS
         choose_path_btn.clicked.connect(self.get_pathname)
@@ -42,18 +42,17 @@ class VisualizeTab(QWidget):
         # LAYOUT
         layout = QVBoxLayout()
         x_layout1 = QHBoxLayout()
-        x_layout1.addWidget(QLabel("Filename:"))
-        x_layout1.addWidget(self.path_input)
-        x_layout1.addWidget(choose_path_btn)
+        x_layout1.addWidget(QLabel("Study:"))
+        x_layout1.addWidget(self.plot_op)
         x_layout2 = QHBoxLayout()
-        x_layout2.addWidget(QLabel("Study:"))
-        x_layout2.addWidget(self.plot_op)
+        x_layout2.addWidget(QLabel("Filename:"))
+        x_layout2.addWidget(self.path_input)
+        x_layout2.addWidget(choose_path_btn)
         layout.addLayout(x_layout1)
         layout.addLayout(x_layout2)
         layout.addWidget(self.plot_widget)
+        layout.addStretch()
         self.setLayout(layout)
-
-        # TEST
         
 
     def get_pathname(self):
@@ -67,28 +66,29 @@ class VisualizeTab(QWidget):
     def create_plot(self, path):
         op = self.plot_op.currentIndex()
         Z = calculate_grid_values(path,op=op,rows_to_skip=3)
-        x = np.arange(Z.shape[0])
-        y = np.arange(Z.shape[0])
-        X,Y = np.meshgrid(x,y)
+        self.cm_plot = self.plot_widget.addPlot(row=0,col=0)
+        cm_image_item = pg.ImageItem()
+        self.cm_plot.addItem(cm_image_item)
+        self.cm_plot.setAspectLocked(True)
         color_map = pg.colormap.getFromMatplotlib("pink") 
         color_map.map(Z, mode='float') 
-        minZ=np.min(Z)
-        maxZ=np.max(Z)
-        # rgba_img = cmap((Z-minZ)/(maxZ - minZ))
-        # surf_plot = gl.GLSurfacePlotItem(x,y,Z, colors=rgba_img)
-        image_view = pg.ImageItem()
-        self.plot_item.addItem(image_view)
-        image_view.setImage(Z)  # Set the image data
-        image_view.setColorMap(color_map)  # ✅ Correct method
-        # if op == 0:
-        #     self.plot_widget.orbit(45,90)
-        #     self.plot_widget.pan(dx=x.max()/2,dy=y.max()/2,dz=60)
-        # else:
-        #     self.plot_widget.orbit(135,90)
-        #     self.plot_widget.pan(dx=x.max()/2,dy=y.max()/2,dz=150)
-        # TEST
-        self.z = Z
-        self.is_topo_plot = True
+        cm_image_item.setImage(Z)
+        cm_image_item.setColorMap(color_map)
+        if op == 0:
+            self.profile_line = self.plot_widget.addPlot(row=0,col=1)
+            x = np.arange(10)
+            y = x
+            self.profile_line.plot(x=x,y=y,pen="r")
+        elif op == 1:
+            self.test_plot = self.plot_widget.addPlot(row=0,col=1)
+            self.test_plot1 = self.plot_widget.addPlot(row=1,col=0)
+            self.test_plot2 = self.plot_widget.addPlot(row=1,col=1)
+            x = np.arange(10)
+            y = x
+            self.test_plot1.plot(x=x,y=y,pen="r")
+            y = x**2
+            self.test_plot2.plot(x=x,y=y,pen="b")
+
 
     def test_create_profile_plot(self, y_val):
         if not self.is_topo_plot:
