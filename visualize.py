@@ -28,8 +28,9 @@ class VisualizeTab(QWidget):
         choose_path_btn = QPushButton("Select Data")
         self.plot_op = QComboBox()
         self.plot_widget = pg.PlotWidget()
+        self.plot_item = self.plot_widget.getPlotItem()
         # self.canvas_widget.setBackgroundColor("#edecec")
-        self.plot_widget.setBackgroundColor("black")
+        # self.plot_widget.setBackgroundColor("black")
 
         # CONFIG
         self.plot_op.addItems(["Topography", "PE"])
@@ -60,7 +61,7 @@ class VisualizeTab(QWidget):
         path = path_data[0]
         if path:
             self.path_input.setText(path)
-            plot_thread = Thread(target=self.create_plot(path))
+            plot_thread = Thread(target=self.create_plot,args=(path,))
             plot_thread.start()
     
     def create_plot(self, path):
@@ -69,18 +70,22 @@ class VisualizeTab(QWidget):
         x = np.arange(Z.shape[0])
         y = np.arange(Z.shape[0])
         X,Y = np.meshgrid(x,y)
-        cmap = plt.get_cmap('pink')
+        color_map = pg.colormap.getFromMatplotlib("pink") 
+        color_map.map(Z, mode='float') 
         minZ=np.min(Z)
         maxZ=np.max(Z)
-        rgba_img = cmap((Z-minZ)/(maxZ - minZ))
-        surf_plot = gl.GLSurfacePlotItem(x,y,Z, colors=rgba_img)
-        self.plot_widget.addItem(surf_plot)
-        if op == 0:
-            self.plot_widget.orbit(45,90)
-            self.plot_widget.pan(dx=x.max()/2,dy=y.max()/2,dz=60)
-        else:
-            self.plot_widget.orbit(135,90)
-            self.plot_widget.pan(dx=x.max()/2,dy=y.max()/2,dz=150)
+        # rgba_img = cmap((Z-minZ)/(maxZ - minZ))
+        # surf_plot = gl.GLSurfacePlotItem(x,y,Z, colors=rgba_img)
+        image_view = pg.ImageItem()
+        self.plot_item.addItem(image_view)
+        image_view.setImage(Z)  # Set the image data
+        image_view.setColorMap(color_map)  # ✅ Correct method
+        # if op == 0:
+        #     self.plot_widget.orbit(45,90)
+        #     self.plot_widget.pan(dx=x.max()/2,dy=y.max()/2,dz=60)
+        # else:
+        #     self.plot_widget.orbit(135,90)
+        #     self.plot_widget.pan(dx=x.max()/2,dy=y.max()/2,dz=150)
         # TEST
         self.z = Z
         self.is_topo_plot = True
