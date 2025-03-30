@@ -113,8 +113,8 @@ class AcquireTab(QWidget):
         colors = ["y","g","b","r"]
         self.plots_refs = [self.plot_widget.plot(np.array([]), pen=colors[i]) for i in range(n)]
 
-    def set_max_input(self,min):
-        self.max_input_value_input.setMinimum(min)
+    def set_max_input(self,min_v):
+        self.max_input_value_input.setMinimum(min_v)
 
     def toggle_stream(self, checked):
         if checked:
@@ -133,7 +133,10 @@ class AcquireTab(QWidget):
         self.acquisition_thread.start()
 
     def stop_acquisition(self):
-        self.acquisition_thread.stop()
+        try:
+            self.acquisition_thread.stop()
+        except:
+            pass
 
     def start_recording(self):
         self.is_recording = True
