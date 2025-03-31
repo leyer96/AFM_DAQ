@@ -54,7 +54,7 @@ class VisualizeTab(QWidget):
         self.topo_x_profile_widget = ScatterPlotWidget(title="X Profile")
         self.topo_y_profile_widget = ScatterPlotWidget(title="Y Profile")
         self.pfm_phase_curve_widget = ScatterPlotWidget(title="Phase Curve")
-        self.pfm_amp_curve_widget = ScatterPlotWidget(title="Phase Curve")
+        self.pfm_amp_curve_widget = ScatterPlotWidget(title="Amp Curve")
         # CONFIG
         self.study_op.addItems(["Topography", "PFM"])
         self.path_input.setEnabled(False)
@@ -64,9 +64,7 @@ class VisualizeTab(QWidget):
         self.pfm_amp_cmap_widget.hide()
         self.pfm_phase_cmap_widget.hide()
         self.pfm_phase_curve_widget.hide()
-        self.pfm_phase_curve_widget.setFixedSize(200,200)
         self.pfm_amp_curve_widget.hide()
-        self.pfm_amp_curve_widget.setFixedSize(200,200)
         for btn in self.pfm_options_btns:
             btn.hide()
 

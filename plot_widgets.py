@@ -8,7 +8,7 @@ import matplotlib.cm as cm
 class ScatterPlotWidget(pg.PlotWidget):
     def __init__(self,title="",xlabel="",ylabel=""):
         super().__init__()
-        self.setFixedSize(200,200)
+        self.setFixedSize(300,300)
         self.plot_item = self.plot()  
         self.plot_item.setData([], [])
         self.setTitle(title)
@@ -24,7 +24,7 @@ class CmapWidget(pg.ImageView):
     v_values = Signal(list)
     def __init__(self):
         super().__init__()
-        self.setFixedSize(200,200)
+        self.setFixedSize(300,300)
         self.image_item = pg.ImageItem()
         self.h_line = pg.InfiniteLine(movable=True,angle=0)
         self.v_line = pg.InfiniteLine(movable=True,angle=90)
