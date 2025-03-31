@@ -49,53 +49,26 @@ def calculate_grid_values(path,op=0,rows_to_skip=0):
         # AMP & PHASE
         amp_data = data["Dev1/ai4"].to_numpy()[fs:fe]
         phase_data = data["Dev1/ai5"].to_numpy()[fs:fe]
-        amps = np.zeros((res,res))
-        phases = np.zeros((res,res))
+        ext = 300
+        amps = np.zeros((res,res,ext))
+        phases = np.zeros((res,res,ext))
         for i in range(res):
             for j in range(res):
                 ps = pixel_indexes[i,j]
                 pe = pixel_indexes[i,j+1]
-                amps[i,j] = np.max(amp_data[ps:pe])
-                phases[i,j] = phase_data[np.argmax(amp_data[ps:pe])]
-        Z = amps
+                index_max = int(ps + ext//2 + np.argmax(amp_data[ps+ext//2:pe-ext//2]))
+                x1 = int(index_max - ext//2)             
+                x2 = int(index_max + ext//2)
+                if x1 > ps and x2 < pe:
+                    amps[i,j,:] = amp_data[x1:x2]
+                    phases[i,j,:] = phase_data[x1:x2]
+                else:
+                    amps[i,j,:] = 0
+                    phases[i,j,:] = 0
+                amps[i,j,0] = np.max(amp_data[ps:pe])
+                phases[i,j,0] = phase_data[index_max]
+        Z = np.stack((amps, phases))
     return Z
-
-def calculate_grid_values_amp(path, rows_to_skip=0): 
-        # ------- CARGAR DATOS -------
-        # file_path = os.path.join(desktop_path, ("pe_data.csv"))
-        # data = load_data(file_path,rows_to_skip=4)
-        # data = data.to_numpy()
-        data = np.load(path)
-        # -------  FIN -------
-        # FRAME
-        frame_data = data[:,0]
-        frame_indexes = get_signal_indexes_numpy(frame_data)
-        fs = frame_indexes[1]
-        fe = frame_indexes[2]
-        # LINE
-        line_data = data[:,1][fs:fe]
-        line_indexes = get_signal_indexes_numpy(line_data)[1:-1]
-        line_indexes = np.reshape(line_indexes, (line_indexes.size//2,2))
-        res = line_indexes.shape[0]
-        # PIXEL
-        pixel_data = data[:,2][fs:fe]
-        pixel_indexes = np.array([np.linspace(s,s+(e-s)//res*res,res+1) for s,e in line_indexes]) # DATA TRIM
-        pixel_indexes = pixel_indexes.astype(int)
-        # f SWEEP
-        sweep_data = data[:,3][fs:fe]
-        # AMP & PHASE
-        amp_data = data[:,4][fs:fe]
-        phase_data = data[:,5][fs:fe]
-        amps = np.zeros((res,res))
-        phases = np.zeros((res,res))
-        for i in range(res):
-            for j in range(res):
-                ps = pixel_indexes[i,j]
-                pe = pixel_indexes[i,j+1]
-                amps[i,j] = np.max(amp_data[ps:pe])
-                phases[i,j] = phase_data[np.argmax(amp_data[ps:pe])]
-        Z = amps
-        return Z
 
 def remove_linear_trend(Z):
     for i in range(len(Z)):

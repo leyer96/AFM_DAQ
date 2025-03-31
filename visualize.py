@@ -10,12 +10,9 @@ from PySide6.QtWidgets import(
     QWidget
 )
 from PySide6.QtCore import QThreadPool
-from threading import Thread
-from plot_utils import calculate_grid_values
-# from plot_dialog import PlotDialog
-from plot_widgets import CmapWidget, ProfileLineWidget
+from processing_worker import ProcessingWorker
+from plot_widgets import CmapWidget, ScatterPlotWidget, SurfacePlotDialog
 import pyqtgraph as pg
-import pyqtgraph.opengl as gl
 import numpy as np
 
 class VisualizeTab(QWidget):
@@ -23,9 +20,9 @@ class VisualizeTab(QWidget):
         super().__init__()
 
         # WIDGETS
-        self.plot_op = QComboBox()
+        self.study_op = QComboBox()
         self.path_input = QLineEdit()
-        choose_path_btn = QPushButton("Select Data")
+        self.choose_path_btn = QPushButton("Select Data")
         # TOPOGRAPHY OPTIONS
         self.topo_2D_op = QCheckBox("Topo 2D")
         self.topo_3D_op = QCheckBox("Topo 3D (new window)")
@@ -37,52 +34,69 @@ class VisualizeTab(QWidget):
         ]
         # PFM OPTIONS
         self.pfm_2D_amp_op = QCheckBox("PFM 2D Amp")
-        self.pfm_2D_phase_op = QCheckBox("PFM 3D Amp")
-        self.pfm_3D_amp_op = QCheckBox("PFM 2D Phase")
-        self.pfm_3D_phase_op = QCheckBox("PFM 3D Phase")
-        self.pfm_amp_profile_line_op = QCheckBox("PFM Amp Profile")
-        self.pfm_phase_profile_line_op = QCheckBox("PFM Phase Profile")
+        self.pfm_2D_phase_op = QCheckBox("PFM 2D Phase") 
+        self.pfm_3D_amp_op = QCheckBox("PFM 3D Amp (New Window)")
+        self.pfm_3D_phase_op = QCheckBox("PFM 3D Phase (New Window)")
+        self.pfm_amp_curve_op = QCheckBox("PFM Amp Curve")
+        self.pfm_phase_curve_op = QCheckBox("PFM Phase Curve")
         self.pfm_options_btns = [
             self.pfm_2D_amp_op,
             self.pfm_2D_phase_op,
             self.pfm_3D_amp_op,
             self.pfm_3D_phase_op,
-            self.pfm_amp_profile_line_op,
-            self.pfm_phase_profile_line_op
+            self.pfm_amp_curve_op,
+            self.pfm_phase_curve_op
         ]
-        # PLOT WIDGETS
+        # PLOT WIDGETSs
         self.topo_cmap_widget = CmapWidget()
-        self.amp_cmap_widget = CmapWidget()
-        self.phase_cmap_widget = CmapWidget()
-        self.topo_x_profile_widget = ProfileLineWidget(title="X Profile")
-        self.topo_y_profile_widget = ProfileLineWidget(title="Y Profile")
-        self.scatter3_widget = pg.PlotWidget()
+        self.pfm_amp_cmap_widget = CmapWidget()
+        self.pfm_phase_cmap_widget = CmapWidget()
+        self.topo_x_profile_widget = ScatterPlotWidget(title="X Profile")
+        self.topo_y_profile_widget = ScatterPlotWidget(title="Y Profile")
+        self.pfm_phase_curve_widget = ScatterPlotWidget(title="Phase Curve")
+        self.pfm_amp_curve_widget = ScatterPlotWidget(title="Phase Curve")
         # CONFIG
-        self.plot_op.addItems(["Topography", "PFM"])
+        self.study_op.addItems(["Topography", "PFM"])
         self.path_input.setEnabled(False)
         self.topo_2D_op.setChecked(True)
         self.topo_profile_line_op.setChecked(True)
         self.topo_3D_op.setChecked(True)
-        self.amp_cmap_widget.hide()
-        self.phase_cmap_widget.hide()
-        self.scatter3_widget.hide()
-        self.scatter3_widget.setFixedSize(200,200)
+        self.pfm_amp_cmap_widget.hide()
+        self.pfm_phase_cmap_widget.hide()
+        self.pfm_phase_curve_widget.hide()
+        self.pfm_phase_curve_widget.setFixedSize(200,200)
+        self.pfm_amp_curve_widget.hide()
+        self.pfm_amp_curve_widget.setFixedSize(200,200)
         for btn in self.pfm_options_btns:
             btn.hide()
 
         self.topo_cmap_widget.h_values.connect(lambda values: self.topo_x_profile_widget.update_plot(np.arange(len(values)),values))
         self.topo_cmap_widget.v_values.connect(lambda values: self.topo_y_profile_widget.update_plot(np.arange(len(values)),values))
+        self.pfm_amp_cmap_widget.h_values.connect(lambda values: self.pfm_amp_curve_widget.update_plot(np.arange(len(values)),values))
+        self.pfm_amp_cmap_widget.v_values.connect(lambda values: self.pfm_amp_curve_widget.update_plot(np.arange(len(values)),values))
+        self.pfm_phase_cmap_widget.h_values.connect(lambda values: self.pfm_phase_curve_widget.update_plot(np.arange(len(values)),values))
+        self.pfm_phase_cmap_widget.v_values.connect(lambda values: self.pfm_phase_curve_widget.update_plot(np.arange(len(values)),values))
+        
+        # THREADPOOL
+        self.threadpool = QThreadPool()
         
         # SIGNALS
-        choose_path_btn.clicked.connect(self.get_pathname)
-        self.plot_op.currentIndexChanged.connect(self.handle_study_option_change)
+        self.choose_path_btn.clicked.connect(self.get_pathname)
+        self.study_op.currentIndexChanged.connect(self.handle_study_option_change)
+        self.topo_profile_line_op.toggled.connect(lambda checked: self.topo_x_profile_widget.show() if checked else self.topo_x_profile_widget.hide())
+        self.topo_profile_line_op.toggled.connect(lambda checked: self.topo_y_profile_widget.show() if checked else self.topo_y_profile_widget.hide())
+        self.topo_2D_op.toggled.connect(lambda checked: self.topo_cmap_widget.show() if checked else self.topo_cmap_widget.hide())
+        self.pfm_2D_amp_op.toggled.connect(lambda checked: self.pfm_amp_cmap_widget.show() if checked else self.pfm_amp_cmap_widget.hide())
+        self.pfm_2D_phase_op.toggled.connect(lambda checked: self.pfm_phase_cmap_widget.show() if checked else self.pfm_phase_cmap_widget.hide())
+        self.pfm_amp_curve_op.toggled.connect(lambda checked: self.pfm_amp_curve_widget.show() if checked else self.pfm_amp_curve_widget.hide())
+        self.pfm_phase_curve_op.toggled.connect(lambda checked: self.pfm_phase_curve_widget.show() if checked else self.pfm_phase_curve_widget.hide())
 
         # LAYOUT
         layout = QVBoxLayout()
 
         x_layout1 = QHBoxLayout()
         x_layout1.addWidget(QLabel("Study:"))
-        x_layout1.addWidget(self.plot_op)
+        x_layout1.addWidget(self.study_op)
 
         x_layout2 = QHBoxLayout()
         x_layout2a = QHBoxLayout()
@@ -94,23 +108,24 @@ class VisualizeTab(QWidget):
         x_layout2a.addWidget(self.pfm_2D_phase_op)
         x_layout2a.addWidget(self.pfm_3D_amp_op)
         x_layout2b.addWidget(self.pfm_3D_phase_op)
-        x_layout2b.addWidget(self.pfm_amp_profile_line_op)
-        x_layout2b.addWidget(self.pfm_phase_profile_line_op)
+        x_layout2b.addWidget(self.pfm_amp_curve_op)
+        x_layout2b.addWidget(self.pfm_phase_curve_op)
 
         x_layout3 = QHBoxLayout()
         x_layout3.addWidget(QLabel("Filename:"))
         x_layout3.addWidget(self.path_input)
-        x_layout3.addWidget(choose_path_btn)
+        x_layout3.addWidget(self.choose_path_btn)
 
         x_layout4 = QHBoxLayout()
         x_layout4.addWidget(self.topo_cmap_widget)
-        x_layout4.addWidget(self.amp_cmap_widget)
-        x_layout4.addWidget(self.phase_cmap_widget)
+        x_layout4.addWidget(self.pfm_amp_cmap_widget)
+        x_layout4.addWidget(self.pfm_phase_cmap_widget)
         
         x_layout5 = QHBoxLayout()
         x_layout5.addWidget(self.topo_x_profile_widget)
         x_layout5.addWidget(self.topo_y_profile_widget)
-        x_layout5.addWidget(self.scatter3_widget)
+        x_layout5.addWidget(self.pfm_amp_curve_widget)
+        x_layout5.addWidget(self.pfm_phase_curve_widget)
 
         layout.addLayout(x_layout1)
         layout.addLayout(x_layout2)
@@ -123,48 +138,60 @@ class VisualizeTab(QWidget):
         
 
     def handle_study_option_change(self, index):
+        self.path_input.clear()
         if index == 0:
+            for btn in self.topo_options_btns:
+                btn.show()
+                btn.setChecked(True)
             for btn in self.pfm_options_btns:
                 btn.hide()
                 btn.setChecked(False)
         else:
             for btn in self.pfm_options_btns:
                 btn.show()
+                btn.setChecked(True)
+            for btn in self.topo_options_btns:
+                btn.setChecked(False)
+                btn.hide()
     
     def get_pathname(self):
         path_data = QFileDialog.getOpenFileName()
         path = path_data[0]
         if path:
             self.path_input.setText(path)
-            plot_thread = Thread(target=self.create_plot,args=(path,))
-            plot_thread.start()
-    
-    def create_plot(self, path):
-        op = self.plot_op.currentIndex()
-        Z = calculate_grid_values(path,op=op,rows_to_skip=3)
-        self.topo_cmap_widget.setup_widget(Z)
-        if op == 1:
-            self.test_plot = self.plot_widget.addPlot(row=0,col=1)
-            self.test_plot1 = self.plot_widget.addPlot(row=1,col=0)
-            self.test_plot2 = self.plot_widget.addPlot(row=1,col=1)
-            x = np.arange(10)
-            y = x
-            self.test_plot1.plot(x=x,y=y,pen="r")
-            y = x**2
-            self.test_plot2.plot(x=x,y=y,pen="b")
+            self.prepare_for_plotting(path)
 
+    def prepare_for_plotting(self,path):
+        op = self.study_op.currentIndex()
+        self.study_op.setEnabled(False)
+        self.choose_path_btn.setEnabled(False)
+        worker = ProcessingWorker(path,op=op)
+        worker.signals.data.connect(self.create_plots)
+        self.threadpool.start(worker)
 
-    def test_create_profile_plot(self, y_val):
-        if not self.is_topo_plot:
-            return
-        if self.test_plot != None:
-            self.test_plot.close()
-        y = self.z[y_val,:]
-        x = np.arange(y.size)
-        m,b = np.polyfit(x,y,1)
-        print(f"m = {m} AND b = {b}")
-        self.test_plot = pg.GraphicsLayoutWidget()
-        self.test_plot.addPlot(x=x,y=y,row=0,col=0)
-        self.test_plot.addPlot(x=x,y=y-(x*m),row=1,col=0,pen="r")
-        self.test_plot.show()
+    def create_plots(self, Z):
+        op = self.study_op.currentIndex()
+        if op == 0:
+            if self.topo_2D_op.isChecked():
+                self.topo_cmap_widget.setup_widget(Z)
+            if self.topo_3D_op.isChecked():
+                topo_surf_dlg = SurfacePlotDialog(Z)
+                topo_surf_dlg.exec()
+        elif op == 1:
+            amps = Z[0,:]
+            phases = Z[1,:]
+            if self.pfm_2D_amp_op.isChecked():
+                self.pfm_amp_cmap_widget.setup_widget(amps)
+            if self.pfm_2D_phase_op.isChecked():
+                self.pfm_phase_cmap_widget.setup_widget(phases)
+            if self.pfm_3D_amp_op.isChecked():
+                amp_surf_dlg = SurfacePlotDialog(amps)
+                amp_surf_dlg.exec()
+            if self.pfm_3D_phase_op.isChecked():
+                phase_surf_dlg = SurfacePlotDialog(phases)
+                phase_surf_dlg.exec()
+        self.study_op.setEnabled(True)
+        self.choose_path_btn.setEnabled(True)
+        
+            
 
