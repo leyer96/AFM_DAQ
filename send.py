@@ -11,6 +11,8 @@ from PySide6.QtWidgets import(
 )
 from PySide6.QtCore import Qt
 from plot_widgets import ScatterPlotWidget
+from srsinst.sr860 import SR865
+import pyvisa as visa
 
 class SendDataTab(QWidget):
     def __init__(self):
@@ -99,6 +101,7 @@ class SendDataTab(QWidget):
         lock_in_group_box.setFixedWidth(300)
         sweep_group_box.setFixedWidth(300)
         indicators_group_box.setFixedWidth(600)
+        self.lock_in_address_input.addItem("-- SELECT --")
         self.r_value.setReadOnly(True)
         self.theta_value.setReadOnly(True)
         self.curr_f.setReadOnly(True)
@@ -122,3 +125,9 @@ class SendDataTab(QWidget):
         layout.setAlignment(self.phase_plot_widget,Qt.AlignHCenter)
         layout.setAlignment(self.amp_plot_widget,Qt.AlignHCenter)
         self.setLayout(layout)
+
+        self.get_visa_resources()
+
+    def get_visa_resources(self):
+        resources = visa.ResourceManager().list_resources()
+        self.lock_in_address_input.addItems(resources)
