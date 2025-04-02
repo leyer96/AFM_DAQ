@@ -11,8 +11,8 @@ from PySide6.QtWidgets import(
 )
 from PySide6.QtCore import Qt
 from plot_widgets import ScatterPlotWidget
-from srsinst.sr860 import SR865
-import pyvisa as visa
+# from srsinst.sr860 import SR865
+# import pyvisa as visa
 
 class SendDataTab(QWidget):
     def __init__(self):
@@ -129,5 +129,6 @@ class SendDataTab(QWidget):
         self.get_visa_resources()
 
     def get_visa_resources(self):
-        resources = visa.ResourceManager().list_resources()
-        self.lock_in_address_input.addItems(resources)
+        pass
+        # resources = visa.ResourceManager().list_resources()
+        # self.lock_in_address_input.addItems(resources)

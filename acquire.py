@@ -14,7 +14,7 @@ from PySide6.QtWidgets import(
 )
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon
-# from acquisition_thread import AcquisitionThread
+from acquisition_thread import AcquisitionThread
 from widgets import ConnectionStatusIndicator
 from utils import Paths
 import pyqtgraph as pg
@@ -45,7 +45,7 @@ class AcquireTab(QWidget):
         
         # ---- DATA ---- #
         self.channels_data = np.array([])
-        self.plots_data = np.zeros(1000)
+        self.plot_data = np.zeros(100)
         self.plots_refs = [self.plot_widget.plot(np.array([]), pen="y")] # CREAR PEN ANTES
 
         # ---- CONFIG ---- #
@@ -109,7 +109,7 @@ class AcquireTab(QWidget):
     def set_n_of_channels(self,n):
         arr = [[] for _ in range(n)]
         self.channels_data = np.array(arr)
-        self.curr_plot_data = np.zeros((n,1000)) # CAMBIAR
+        self.plot_data = np.zeros((n,100)) # CAMBIAR
         colors = ["y","g","b","r"]
         self.plots_refs = [self.plot_widget.plot(np.array([]), pen=colors[i]) for i in range(n)]
 
@@ -128,7 +128,7 @@ class AcquireTab(QWidget):
         max_v = self.max_input_value_input.value()
         sample_rate = self.sample_rate_input.value()
         n_samples = self.n_samples_input.value()
-        # self.acquisition_thread = AcquisitionThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=1)
+        self.acquisition_thread = AcquisitionThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=1)
         self.acquisition_thread.data.connect(self.on_new_data)
         self.acquisition_thread.start()
 
@@ -145,8 +145,8 @@ class AcquireTab(QWidget):
     def stop_recording(self):
         # TEST 
         self.is_recording = False
-        cols = ["Dev1/ai"+i for i in range(len(self.plots_refs))]
-        data = self.channels_data
+        cols = ["Dev1/ai"+str(i) for i in range(len(self.plots_refs))]
+        data = self.channels_data.T
         df = pd.DataFrame(data,columns=cols)
         fn = "test.csv"
         dirname = QFileDialog.getExistingDirectory(self)
@@ -159,19 +159,22 @@ class AcquireTab(QWidget):
 
     def update_plot(self):
         if self.stream_data_option.isChecked():
-            for i in range(len(self.plots_refs)):
-                self.plots_refs[i].setData(self.plots_data[i]) # REVISAR FUNCIONAMIENTO 1 SOLO PLOT
+            if len(self.plots_refs) == 1:
+                self.plots_refs[0].setData(self.plot_data)
+            else:
+                for i in range(len(self.plots_refs)):
+                    self.plots_refs[i].setData(self.plot_data[i,:])
 
     def on_new_data(self, new_data):
-        # REVISAR
         n = len(new_data)
-        self.plot_data = np.roll(self.plot_data, -n)
-        try:
-            self.plot_data[::,-n] = new_data
-        except IndexError:
+        new_data = np.array(new_data)
+        if new_data.shape[0] == 1:
+            self.plot_data = np.roll(self.plot_data, -n)
             self.plot_data[-n:] = new_data
-        if self.is_recording:
-            try:
+            if self.is_recording:
+                 self.channels_data = np.concatenate((self.channels_data,new_data))
+        else:
+            self.plot_data = np.roll(self.plot_data, -n,axis=1)
+            self.plot_data[:,-n:] = new_data
+            if self.is_recording:
                 self.channels_data = np.concatenate((self.channels_data,new_data),axis=1)
-            except np.exceptions.AxisError:
-                self.channels_data = np.concatenate((self.channels_data,new_data[0]))

@@ -2,6 +2,7 @@ from PySide6.QtCore import QThread, Signal, Slot
 from nidaqmx import Task
 from nidaqmx.constants import TerminalConfiguration, AcquisitionType
 import numpy as np
+import time
 AI_CHANNELS = ["Dev1/ai0", "Dev1/ai1", "Dev1/ai2", "Dev1/ai3"]
 class AcquisitionThread(QThread):
     data = Signal(list)
@@ -20,9 +21,7 @@ class AcquisitionThread(QThread):
     def run(self):
         try:
             while True:
-                # data = self.task.read(number_of_samples_per_channel=self.n_samples)
-                data = np.reshape(self.task.read(), (self.n_channels,1))
-                # self.data_arr = np.concatenate((self.data_arr,data))
+                data = self.task.read(number_of_samples_per_channel=self.n_samples)
                 self.data.emit(data)
                 if not self.is_running:
                     return
