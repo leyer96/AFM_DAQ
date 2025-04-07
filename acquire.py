@@ -5,17 +5,17 @@ from PySide6.QtWidgets import(
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
-    QLabel,
-    QLineEdit,
+    QGroupBox,
+    QHBoxLayout,
     QPushButton,
     QSpinBox,
     QVBoxLayout,
     QWidget
 )
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon
 from acquisition_thread import AcquisitionThread
-from widgets import ConnectionStatusIndicator
+# from widgets import ConnectionStatusIndicator
 from utils import Paths
 import pyqtgraph as pg
 import numpy as np
@@ -29,17 +29,20 @@ class AcquireTab(QWidget):
         ## PLOT WIDGET
         self.plot_widget = pg.PlotWidget()
         self.stream_data_option = QCheckBox("Stream data")
-        ## DAQ CONFIG INPUT WIDGETS
+        ## ACQUISITION CONFIG
+        acquisition_config_group_box = QGroupBox("Acquisition Configuration")
         self.n_channels_input = QSpinBox() 
         self.channel_selection_input = QComboBox()
+        ## DAQ CONFIG
+        daq_config_group_box = QGroupBox("DAQ Configuration")
         self.min_input_value_input = QDoubleSpinBox()
         self.max_input_value_input = QDoubleSpinBox()
         self.sample_rate_input = QDoubleSpinBox()
         self.n_samples_input = QSpinBox()
-        self.n_cicles_input = QSpinBox()
-        self.n_cicles = QLabel()
+        # self.n_cicles_input = QSpinBox()
+        # self.n_cicles = QLabel()
         ## RECORDING CONTROLS
-        self.filename_input = QLineEdit(text="datos_daq.csv")
+        # self.filename_input = QLineEdit(text="datos_daq.csv")
         self.record_btn = QPushButton("RECORD")
         stop_btn = QPushButton("STOP")
         
@@ -83,25 +86,30 @@ class AcquireTab(QWidget):
 
         # ---- LAYOUT ---- #
         ## FORM - DAQ CONFIG
-        form = QFormLayout()
-        form.addRow("Number of channels to acquire", self.n_channels_input)
-        form.addRow("Plot channel", self.channel_selection_input)
-        form.addRow("Min. Value", self.min_input_value_input)
-        form.addRow("Max. Value", self.max_input_value_input)
-        form.addRow("DAQ Sample Rate", self.sample_rate_input)
-        form.addRow("Number of Samples", self.n_samples_input)
-        form.addRow("Number of Cicles", self.n_cicles_input)
-        form.addRow("Filename", self.filename_input)
+        f1 = QFormLayout()
+        f1.addRow("# of channels to acquire", self.n_channels_input)
+        f1.addRow("Plot channel", self.channel_selection_input)
+        acquisition_config_group_box.setLayout(f1)
+        f2 = QFormLayout()
+        f2.addRow("Min. Value (V)", self.min_input_value_input)
+        f2.addRow("Max. Value (V)", self.max_input_value_input)
+        f2.addRow("DAQ Sample Rate (samples/s)", self.sample_rate_input)
+        f2.addRow("Number of Samples (samples per read)", self.n_samples_input)
+        daq_config_group_box.setLayout(f2)
+        # form.addRow("Number of Cicles", self.n_cicles_input)
+        # form.addRow("Filename", self.filename_input)
         ## MAIN LAYOUT
         layout = QVBoxLayout()
         layout.addWidget(self.plot_widget)
         layout.addWidget(self.stream_data_option)
-        layout.addLayout(form)
+        h_l1 = QHBoxLayout()
+        h_l1.addWidget(acquisition_config_group_box)
+        h_l1.addWidget(daq_config_group_box)
+        layout.addLayout(h_l1)
         layout.addWidget(self.record_btn)
         layout.addWidget(stop_btn)
 
         self.setLayout(layout)
-        
         # ---- TEST ---- #
 
         # ----- TEST -----
@@ -128,7 +136,7 @@ class AcquireTab(QWidget):
         max_v = self.max_input_value_input.value()
         sample_rate = self.sample_rate_input.value()
         n_samples = self.n_samples_input.value()
-        self.acquisition_thread = AcquisitionThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=1)
+        self.acquisition_thread = AcquisitionThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=n_samples)
         self.acquisition_thread.data.connect(self.on_new_data)
         self.acquisition_thread.start()
 
