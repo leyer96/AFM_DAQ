@@ -1,21 +1,18 @@
 from PySide6.QtWidgets import(
-    QComboBox,
     QDoubleSpinBox,
     QGroupBox,
     QGridLayout,
-    QHBoxLayout,
     QLabel,
-    QLineEdit,
-    QVBoxLayout,
     QWidget
 )
-from PySide6.QtCore import Qt, QThreadPool
+from PySide6.QtCore import Qt, QThreadPool, QTimer
 from plot_widgets import ScatterPlotWidget
 from lockin_worker import LockinWorker
 from srsinst.sr860 import SR865
 from lockin_config_widget import LockInConfigWidget
 import pymeasure.instruments.srs.sr830 as SR830
 import pyvisa as visa
+import numpy as np
 
 class SendDataTab(QWidget):
     def __init__(self):
@@ -88,11 +85,15 @@ class SendDataTab(QWidget):
         self.setLayout(layout)
 
         # DATA
-        self.thetas = []
-        self.rs = []
+        self.fs = np.array([])
+        self.thetas = np.array([])
+        self.rs = np.array([])
 
         # THREADPOOL
         self.threadpool = QThreadPool()
+        # TIMER
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_plots)
 
         self.get_visa_resources()
 
@@ -112,6 +113,17 @@ class SendDataTab(QWidget):
         worker_lockin2 = LockinWorker(self.lockin2)
         worker_lockin1.signals.data.connect(self.on_new_data)
         worker_lockin2.signals.data.connect(self.on_new_data)
-        
+        self.threadpool.start(worker_lockin1)
+        self.threadpool.start(worker_lockin2)
+        self.timer.start(1)
+
+    def on_new_data(self, data):
+        self.fs.append(data["f"])
+        self.thetas.append(data["theta"])
+        self.rs.append(data["rs"])
+
+    def update_plots(self):
+        self.phase_plot_widget.setData(self.fs, self.thetas)
+        self.amp_plot_widget.setData(self.fs, self.rs)
 
 
