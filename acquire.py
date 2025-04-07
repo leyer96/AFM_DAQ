@@ -48,19 +48,20 @@ class AcquireTab(QWidget):
         
         # ---- DATA ---- #
         self.channels_data = np.array([])
-        self.plot_data = np.zeros(100)
+        self.plot_data = np.array([])
         self.plots_refs = [self.plot_widget.plot(np.array([]), pen="y")] # CREAR PEN ANTES
 
         # ---- CONFIG ---- #
         self.DAQ_connected = False
         self.is_recording = False
+        self.is_streaming = False
         ## THREADS & TIMER
         self.plot_timer = QTimer(self)
         self.plot_timer.timeout.connect(self.update_plot)
         self.plot_timer.start(100)
         ## PLOT
-        self.plot_widget.setXRange(1,100)
-        self.plot_widget.setYRange(-0.4,0.4)
+        # self.plot_widget.setXRange(1,100)
+        # self.plot_widget.setYRange(-0.4,0.4)
         ## INPUTS
         self.n_channels_input.setRange(-10,10)
         self.n_channels_input.setValue(1)
@@ -110,15 +111,12 @@ class AcquireTab(QWidget):
         layout.addWidget(stop_btn)
 
         self.setLayout(layout)
-        # ---- TEST ---- #
-
-        # ----- TEST -----
 
     def set_n_of_channels(self,n):
         arr = [[] for _ in range(n)]
         self.channels_data = np.array(arr)
-        self.plot_data = np.zeros((n,100)) # CAMBIAR
-        colors = ["y","g","b","r"]
+        self.plot_data = np.zeros((n,1))
+        colors = ["yellow","green","blue","red", "white"] # CAMBIAR A PEN
         self.plots_refs = [self.plot_widget.plot(np.array([]), pen=colors[i]) for i in range(n)]
 
     def set_max_input(self,min_v):
@@ -139,12 +137,15 @@ class AcquireTab(QWidget):
         self.acquisition_thread = AcquisitionThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=n_samples)
         self.acquisition_thread.data.connect(self.on_new_data)
         self.acquisition_thread.start()
+        self.is_streaming = True
+        self.n_channels_input.setEnabled(False)
 
     def stop_acquisition(self):
-        try:
+        if self.is_streaming:
             self.acquisition_thread.stop()
-        except:
-            pass
+            self.acquisition_thread.close()
+            self.is_streaming = False
+            self.n_channels_input.setEnabled(True)
 
     def start_recording(self):
         self.is_recording = True
