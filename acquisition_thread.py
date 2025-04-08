@@ -2,7 +2,6 @@ from PySide6.QtCore import QThread, Signal, Slot
 # from nidaqmx import Task
 # from nidaqmx.constants import TerminalConfiguration, AcquisitionType
 import numpy as np
-import time
 AI_CHANNELS = ["Dev1/ai0", "Dev1/ai1", "Dev1/ai2", "Dev1/ai3"]
 class AcquisitionThread(QThread):
     data = Signal(list)
