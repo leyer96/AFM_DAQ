@@ -39,6 +39,7 @@ class DAQInterface:
 
 if __name__ == "__main__":
     app = QApplication([])
-    root = QMainWindow()
-    window = DAQInterface(root)
+    main_window = QMainWindow()
+    interface = DAQInterface(main_window)
+    # interface.main_window.showFullScreen()
     app.exec()

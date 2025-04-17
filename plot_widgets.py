@@ -97,13 +97,14 @@ class SurfacePlotDialog(QDialog):
         self.gl_widget.addItem(surface)
 
 class SurfacePlotWindowMatplot(QWidget):
-    def __init__(self, Z):
+    def __init__(self, Z,title=""):
         super().__init__()
-        # self.setFixedSize(200,200)
+        self.setFixedSize(300,300)
         fig = Figure(figsize=(5,3))
         fig_canvas = FigureCanvas(fig)
         fig_canvas.setParent(self)
         ax = fig_canvas.figure.add_subplot(111,projection="3d")
+        ax.set_title(title)
         X = np.arange(Z.shape[0])
         Y = np.arange(Z.shape[1])
         print(f"ORIGINAL Z SHAPE {Z.shape}")
