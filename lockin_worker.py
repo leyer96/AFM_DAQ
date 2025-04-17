@@ -4,6 +4,7 @@ from time import sleep
 
 class WorkerSignals(QObject):
     data = Signal(object)
+    finished = Signal()
 
 class LockinWorker(QRunnable):
     def __init__(self,lockin=None,sine_output=0,f0=0,ff=0,f_step=0):
@@ -31,3 +32,4 @@ class LockinWorker(QRunnable):
                     "f": f
                 }
                 self.signals.data.emit(data)
+            self.signals.finished.emit()

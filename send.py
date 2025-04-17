@@ -3,6 +3,7 @@ from PySide6.QtWidgets import(
     QGroupBox,
     QGridLayout,
     QLabel,
+    QPushButton,
     QWidget
 )
 from PySide6.QtCore import Qt, QThreadPool, QTimer
@@ -67,7 +68,7 @@ class SendDataTab(QWidget):
         self.curr_harmonic.setReadOnly(True)
 
         # SIGNALS
-        self.lock_in1_config_widget.address_input.currentTextChanged.connect(lambda address: self.connect_to_lockin(address,v="SR860"))
+        self.lock_in1_config_widget.address_input.currentTextChanged.connect(lambda address: self.connect_to_lockin(address,v="SR865"))
         self.lock_in2_config_widget.address_input.currentTextChanged.connect(lambda address: self.connect_to_lockin(address,v="SR830"))
 
         # LAYOUT
@@ -96,11 +97,16 @@ class SendDataTab(QWidget):
         self.timer.timeout.connect(self.update_plots)
 
         self.get_visa_resources()
+        
+        # TEST
+        test_btn = QPushButton('TEST')
+        layout.addWidget(test_btn,0,2,1,1)
+        test_btn.clicked.connect(self.start_sweep)
 
     def get_visa_resources(self):
         resources = visa.ResourceManager().list_resources()
         self.lock_in1_config_widget.address_input.addItems(resources)
-        self.lock_in1_config_widget.address_input.addItems(resources)
+        self.lock_in2_config_widget.address_input.addItems(resources)
 
     def connect_to_lockin(self, address, v):
         if v == "SR865":
@@ -109,21 +115,24 @@ class SendDataTab(QWidget):
             self.lockin2 = SR830("visa", address)
 
     def start_sweep(self):
-        worker_lockin1 = LockinWorker(self.lockin1)
-        worker_lockin2 = LockinWorker(self.lockin2)
+        l1_amp = self.lock_in1_config_widget.output_amp_input.value()
+        l1_f0 = self.lock_in1_config_widget.f0_input.value()
+        l1_ff = self.lock_in1_config_widget.ff_input.value()
+        l1_f_step = self.lock_in1_config_widget.f_step_input.value()
+        worker_lockin1 = LockinWorker(lockin=self.lockin1,sine_output=l1_amp,f0=l1_f0,ff=l1_ff,f_step=l1_f_step)
+        # worker_lockin2 = LockinWorker(self.lockin2)
         worker_lockin1.signals.data.connect(self.on_new_data)
-        worker_lockin2.signals.data.connect(self.on_new_data)
+        worker_lockin1.signals.finished.connect(self.timer.stop)
+        # worker_lockin2.signals.data.connect(self.on_new_data)
         self.threadpool.start(worker_lockin1)
-        self.threadpool.start(worker_lockin2)
-        self.timer.start(1)
+        # self.threadpool.start(worker_lockin2)
+        self.timer.start(1000)
 
     def on_new_data(self, data):
-        self.fs.append(data["f"])
-        self.thetas.append(data["theta"])
-        self.rs.append(data["rs"])
+        self.fs = np.append(self.fs,data["f"])
+        self.thetas = np.append(self.thetas, data["theta"])
+        self.rs = np.append(self.rs, data["r"])
 
     def update_plots(self):
-        self.phase_plot_widget.setData(self.fs, self.thetas)
-        self.amp_plot_widget.setData(self.fs, self.rs)
-
-
+        self.phase_plot_widget.update_plot(self.fs, self.thetas)
+        self.amp_plot_widget.update_plot(self.fs, self.rs)

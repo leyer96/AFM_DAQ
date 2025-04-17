@@ -11,7 +11,7 @@ from PySide6.QtWidgets import(
 )
 from PySide6.QtCore import QThreadPool
 from processing_worker import ProcessingWorker
-from plot_widgets import CmapWidget, ScatterPlotWidget, SurfacePlotDialog
+from plot_widgets import CmapWidget, ScatterPlotWidget, SurfacePlotDialog, SurfacePlotWindowMatplot
 import pyqtgraph as pg
 import numpy as np
 
@@ -55,6 +55,9 @@ class VisualizeTab(QWidget):
         self.topo_y_profile_widget = ScatterPlotWidget(title="Y Profile")
         self.pfm_phase_curve_widget = ScatterPlotWidget(title="Phase Curve")
         self.pfm_amp_curve_widget = ScatterPlotWidget(title="Amp Curve")
+        self.topo_3D_window = None
+        self.pfm_3D_amp_window = None
+        self.pfm_3D_phase_window = None
         # CONFIG
         self.study_op.addItems(["Topography", "PFM"])
         self.path_input.setEnabled(False)
@@ -173,8 +176,8 @@ class VisualizeTab(QWidget):
             if self.topo_2D_op.isChecked():
                 self.topo_cmap_widget.setup_widget(Z)
             if self.topo_3D_op.isChecked():
-                topo_surf_dlg = SurfacePlotDialog(Z)
-                topo_surf_dlg.exec()
+                self.topo_3D_window = SurfacePlotWindowMatplot(Z)
+                self.topo_3D_window.show()
         elif op == 1:
             amps = Z[0,:]
             phases = Z[1,:]
@@ -183,11 +186,11 @@ class VisualizeTab(QWidget):
             if self.pfm_2D_phase_op.isChecked():
                 self.pfm_phase_cmap_widget.setup_widget(phases)
             if self.pfm_3D_amp_op.isChecked():
-                amp_surf_dlg = SurfacePlotDialog(amps)
-                amp_surf_dlg.exec()
+                self.pfm_3D_amp_window = SurfacePlotWindowMatplot(amps)
+                self.pfm_3D_amp_window.show()
             if self.pfm_3D_phase_op.isChecked():
-                phase_surf_dlg = SurfacePlotDialog(phases)
-                phase_surf_dlg.exec()
+                self.pfm_3D_phase_window = SurfacePlotWindowMatplot(phases)
+                self.pfm_3D_phase_window.show()
         self.study_op.setEnabled(True)
         self.choose_path_btn.setEnabled(True)
         

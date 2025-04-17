@@ -1,4 +1,3 @@
-from threading import Thread
 from PySide6.QtWidgets import(
     QCheckBox,
     QComboBox,
@@ -58,7 +57,6 @@ class AcquireTab(QWidget):
         ## THREADS & TIMER
         self.plot_timer = QTimer(self)
         self.plot_timer.timeout.connect(self.update_plot)
-        self.plot_timer.start(100)
         ## PLOT
         # self.plot_widget.setXRange(1,100)
         # self.plot_widget.setYRange(-0.4,0.4)
@@ -66,8 +64,8 @@ class AcquireTab(QWidget):
         self.n_channels_input.setRange(-10,10)
         self.n_channels_input.setValue(1)
         self.channel_selection_input.addItems(["All","Dev1/ai0", "Dev1/ai1", "Dev1/ai2", "Dev1/ai3", "Dev1/ai4", "Dev1/ai5"])
+        self.sample_rate_input.setRange(0,100000)
         self.sample_rate_input.setValue(1000)
-        self.sample_rate_input.setRange(0,100*1000)
         self.min_input_value_input.setRange(-10,10)
         self.min_input_value_input.setValue(-10)
         self.max_input_value_input.setRange(-10,10)
@@ -134,6 +132,7 @@ class AcquireTab(QWidget):
         max_v = self.max_input_value_input.value()
         sample_rate = self.sample_rate_input.value()
         n_samples = self.n_samples_input.value()
+        self.plot_timer.start(1000)
         self.acquisition_thread = AcquisitionThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=n_samples)
         self.acquisition_thread.data.connect(self.on_new_data)
         self.acquisition_thread.start()
@@ -177,13 +176,11 @@ class AcquireTab(QWidget):
     def on_new_data(self, new_data):
         n = len(new_data)
         new_data = np.array(new_data)
-        if new_data.shape[0] == 1:
-            self.plot_data = np.roll(self.plot_data, -n)
-            self.plot_data[-n:] = new_data
-            if self.is_recording:
-                 self.channels_data = np.concatenate((self.channels_data,new_data))
-        else:
-            self.plot_data = np.roll(self.plot_data, -n,axis=1)
-            self.plot_data[:,-n:] = new_data
+        if new_data.shape[0] == self.n_channels_input.value():
+            self.plot_data = np.concatenate((self.plot_data,new_data),axis=1)
             if self.is_recording:
                 self.channels_data = np.concatenate((self.channels_data,new_data),axis=1)
+        else:
+            self.plot_data = np.concatenate((self.plot_data, new_data))
+            if self.is_recording:
+                 self.channels_data = np.concatenate((self.channels_data,new_data))

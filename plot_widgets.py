@@ -1,9 +1,12 @@
-from PySide6.QtWidgets import QDialog, QVBoxLayout
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QWidget
 import pyqtgraph as pg
 from PySide6.QtCore import Signal
 import pyqtgraph.opengl as gl
 import numpy as np
 import matplotlib.cm as cm
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.figure import Figure
 
 class ScatterPlotWidget(pg.PlotWidget):
     def __init__(self,title="",xlabel="",ylabel=""):
@@ -92,4 +95,26 @@ class SurfacePlotDialog(QDialog):
         surface = gl.GLSurfacePlotItem(x=x,y=y,z=Z,colors=colors)
         surface.setGLOptions("opaque")
         self.gl_widget.addItem(surface)
+
+class SurfacePlotWindowMatplot(QWidget):
+    def __init__(self, Z):
+        super().__init__()
+        # self.setFixedSize(200,200)
+        fig = Figure(figsize=(5,3))
+        fig_canvas = FigureCanvas(fig)
+        fig_canvas.setParent(self)
+        ax = fig_canvas.figure.add_subplot(111,projection="3d")
+        X = np.arange(Z.shape[0])
+        Y = np.arange(Z.shape[1])
+        print(f"ORIGINAL Z SHAPE {Z.shape}")
+        X, Y = np.meshgrid(X, Y)
+        if Z.ndim == 3:
+            Z = Z[:,:,0]
+        print(f"X SHAPE: {X.shape}; Y SHAPE: {Y.shape}; Z SHAPE {Z.shape}")
+        surf = ax.plot_surface(X,Y,Z,cmap=cm.pink)
+        fig.colorbar(surf,shrink=0.5,aspect=5)
+        layout = QVBoxLayout()
+        layout.addWidget(NavigationToolbar(fig_canvas, self))
+        layout.addWidget(fig_canvas)
+        self.setLayout(layout)
 
