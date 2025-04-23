@@ -61,6 +61,9 @@ class AcquireTab(QWidget):
         # self.plot_widget.setXRange(1,100)
         # self.plot_widget.setYRange(-0.4,0.4)
         ## INPUTS
+        self.plot_xlim_input = QSpinBox()
+        self.plot_xlim_input.setRange(1e2,1e8)
+        self.plot_xlim_input.setValue(1e5)
         self.n_channels_input.setRange(-10,10)
         self.n_channels_input.setValue(1)
         self.channel_selection_input.addItems(["All","Dev1/ai0", "Dev1/ai1", "Dev1/ai2", "Dev1/ai3", "Dev1/ai4", "Dev1/ai5"])
@@ -87,6 +90,7 @@ class AcquireTab(QWidget):
         ## FORM - DAQ CONFIG
         f1 = QFormLayout()
         f1.addRow("# of channels to acquire", self.n_channels_input)
+        f1.addRow("x-Axis Limit", self.plot_xlim_input)
         f1.addRow("Plot channel", self.channel_selection_input)
         acquisition_config_group_box.setLayout(f1)
         f2 = QFormLayout()
@@ -176,11 +180,23 @@ class AcquireTab(QWidget):
     def on_new_data(self, new_data):
         n = len(new_data)
         new_data = np.array(new_data)
-        if new_data.shape[0] == self.n_channels_input.value():
-            self.plot_data = np.concatenate((self.plot_data,new_data),axis=1)
+        xlim = self.plot_xlim_input.value()
+        n_points = len(self.plot_data)
+        if self.n_channels_input.value() > 1: #REVISAR QUE CONDICIÓN APLIQUE PARA CASO CUANDO NDIM == 1 Y SIZE == 1
+            if n_points <= xlim:
+                self.plot_data = np.concatenate((self.plot_data,new_data),axis=1)
+            else:
+                delta = n_points - xlim
+                self.plot_data = np.roll(self.plot_data,-n,axis=1)
+                self.plot_data[:,-n:] = new_data
             if self.is_recording:
                 self.channels_data = np.concatenate((self.channels_data,new_data),axis=1)
         else:
-            self.plot_data = np.concatenate((self.plot_data, new_data))
+            if n_points <= xlim:
+                self.plot_data = np.concatenate((self.plot_data, new_data))
+            else:
+                delta = n_points - xlim
+                self.plot_data = np.roll(self.plot_data,-n)
+                self.plot_data[-n:] = new_data
             if self.is_recording:
                  self.channels_data = np.concatenate((self.channels_data,new_data))

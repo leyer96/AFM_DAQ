@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import re
 
 def load_data(path, rows_to_skip=0):
     data = np.array([])
