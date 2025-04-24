@@ -155,29 +155,15 @@ class AcquireTab(QWidget):
         cols = ["Dev1/ai"+str(i) for i in range(len(self.plots_refs))]
         self.csv_columns = cols
         self.record_file_path = None
-        # dirname = QFileDialog.getExistingDirectory(self)
-        dirname = os.getcwd()
+        dirname = os.getcwd() # ADD USER SELECT
         if dirname:
             self.record_file_path = dirname + '/test2.csv'
-            print(self.record_file_path)
-            # Write header only once
             with open(self.record_file_path, 'w') as f:
                 f.write(','.join(self.csv_columns) + '\n')
 
     def stop_recording(self):
         # TEST 
         self.is_recording = False
-        # cols = ["Dev1/ai"+str(i) for i in range(len(self.plots_refs))]
-        # data = self.channels_data.T
-        # df = pd.DataFrame(data,columns=cols)
-        # fn = "test.csv"
-        # dirname = QFileDialog.getExistingDirectory(self)
-        # if dirname:
-        #     path = dirname + '/' + fn
-        #     print(path)
-        #     df.to_csv(path,index=False)
-        # n = self.n_channels_input.value()
-        # self.channels_data = np.array([[] for _ in range(n)])
         self.record_btn.setEnabled(True)
 
     def update_plot(self):
@@ -192,15 +178,14 @@ class AcquireTab(QWidget):
         new_data = np.array(new_data)
         n = new_data.shape[1]
         if new_data.shape[0] == self.n_channels_input.value():
-            # self.plot_data = np.concatenate((self.plot_data,new_data),axis=1)
             self.plot_data = np.roll(self.plot_data,-n,axis=1)
             self.plot_data[:,-n:] = new_data
             if self.is_recording:
-                # self.channels_data = np.concatenate((self.channels_data,new_data),axis=1)
                 if self.is_recording and self.record_file_path:
                     df = pd.DataFrame(new_data.T, columns=self.csv_columns)
                     df.to_csv(self.record_file_path, mode='a', header=False, index=False)
         else:
+            # FIX
             self.plot_data = np.concatenate((self.plot_data, new_data))
             if self.is_recording:
                  self.channels_data = np.concatenate((self.channels_data,new_data))
