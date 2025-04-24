@@ -4,7 +4,8 @@ import pandas as pd
 def load_data(path, rows_to_skip=0):
     data = np.array([])
     try:
-        data = pd.read_csv(path, skiprows=rows_to_skip)
+        # data = pd.read_csv(path, skiprows=rows_to_skip)
+        data = pd.read_csv(path)
     except Exception as e:
         print(e)
     return data
@@ -45,7 +46,10 @@ def calculate_grid_values(path,op=0,rows_to_skip=0):
     # RESOLUTION
     res = line_indexes.size//2
     # PIXEL
-    line_indexes = np.reshape(line_indexes, (res,2))
+    try:
+        line_indexes = np.reshape(line_indexes, (res,2))
+    except:
+        line_indexes = np.reshape(line_indexes[1:], (res,2))
     pixel_data = pixel_data[fs:fe]
     pixel_indexes = np.array([np.linspace(s,s+(e-s)//res*res,res+1) for s,e in line_indexes]) # DATA TRIM
     pixel_indexes = pixel_indexes.astype(int)
@@ -58,7 +62,8 @@ def calculate_grid_values(path,op=0,rows_to_skip=0):
                 ps = pixel_indexes[i,j]
                 pe = pixel_indexes[i,j+1]
                 height[i,j] = np.mean(height_data[ps:pe])
-        Z = remove_linear_trend(height)
+        Z = height
+        # Z = remove_linear_trend(height)
     elif op == 1:
         # AMP & PHASE
         amp_data = amp_data[fs:fe]

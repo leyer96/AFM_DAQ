@@ -57,20 +57,22 @@ class CmapWidget(pg.ImageView):
 
     def handle_h_line_change(self, pos):
         pos = int(self.h_line.value())
+        print(f"HORIZONTAL PIXEL {pos}")
         if self.n_dim == 2:
-            values = self.image[:,pos]
+            values = np.flip(self.image[:,pos])
         else:
             y_pos = int(self.v_line.value())
-            values = self.image[pos,y_pos,1:]
+            values = np.flip(self.image[pos,y_pos,1:])
         self.h_values.emit(values)
 
     def handle_v_line_change(self, pos):
         pos = int(self.v_line.value())
+        print(f"VERTICAL PIXEL {pos}")  
         if self.n_dim == 2:
-            values = self.image[pos,:]
+            values = np.flip(self.image[pos,:])
         else:
             x_pos = int(self.v_line.value())
-            values = self.image[x_pos,pos,1:]
+            values = np.flip(self.image[x_pos,pos,1:])
         self.v_values.emit(values)
 
 class SurfacePlotDialog(QDialog):

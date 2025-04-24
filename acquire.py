@@ -1,3 +1,4 @@
+from threading import Thread
 from PySide6.QtWidgets import(
     QCheckBox,
     QComboBox,
@@ -19,6 +20,7 @@ from utils import Paths
 import pyqtgraph as pg
 import numpy as np
 import pandas as pd
+import os
 
 
 class AcquireTab(QWidget):
@@ -47,7 +49,8 @@ class AcquireTab(QWidget):
         
         # ---- DATA ---- #
         self.channels_data = np.array([])
-        self.plot_data = np.array([])
+        # self.plot_data = np.array([])
+        self.plot_data = np.zeros((1,50000))
         self.plots_refs = [self.plot_widget.plot(np.array([]), pen="y")] # CREAR PEN ANTES
 
         # ---- CONFIG ---- #
@@ -61,20 +64,17 @@ class AcquireTab(QWidget):
         # self.plot_widget.setXRange(1,100)
         # self.plot_widget.setYRange(-0.4,0.4)
         ## INPUTS
-        self.plot_xlim_input = QSpinBox()
-        self.plot_xlim_input.setRange(1e2,1e8)
-        self.plot_xlim_input.setValue(1e5)
         self.n_channels_input.setRange(-10,10)
         self.n_channels_input.setValue(1)
         self.channel_selection_input.addItems(["All","Dev1/ai0", "Dev1/ai1", "Dev1/ai2", "Dev1/ai3", "Dev1/ai4", "Dev1/ai5"])
         self.sample_rate_input.setRange(0,100000)
-        self.sample_rate_input.setValue(1000)
+        self.sample_rate_input.setValue(40000)
         self.min_input_value_input.setRange(-10,10)
         self.min_input_value_input.setValue(-10)
         self.max_input_value_input.setRange(-10,10)
         self.max_input_value_input.setValue(10)
         self.n_samples_input.setRange(0,999999)
-        self.n_samples_input.setValue(1000)
+        self.n_samples_input.setValue(40000)
         ## ICONS
         self.record_btn.setIcon(QIcon(Paths.icon("control-record.png")))
         stop_btn.setIcon(QIcon(Paths.icon("control-stop-square.png")))
@@ -90,7 +90,6 @@ class AcquireTab(QWidget):
         ## FORM - DAQ CONFIG
         f1 = QFormLayout()
         f1.addRow("# of channels to acquire", self.n_channels_input)
-        f1.addRow("x-Axis Limit", self.plot_xlim_input)
         f1.addRow("Plot channel", self.channel_selection_input)
         acquisition_config_group_box.setLayout(f1)
         f2 = QFormLayout()
@@ -117,7 +116,7 @@ class AcquireTab(QWidget):
     def set_n_of_channels(self,n):
         arr = [[] for _ in range(n)]
         self.channels_data = np.array(arr)
-        self.plot_data = np.zeros((n,1))
+        self.plot_data = np.zeros((n,50000))
         colors = ["yellow","green","blue","red", "white"] # CAMBIAR A PEN
         self.plots_refs = [self.plot_widget.plot(np.array([]), pen=colors[i]) for i in range(n)]
 
@@ -153,20 +152,32 @@ class AcquireTab(QWidget):
     def start_recording(self):
         self.is_recording = True
         self.record_btn.setEnabled(False)
+        cols = ["Dev1/ai"+str(i) for i in range(len(self.plots_refs))]
+        self.csv_columns = cols
+        self.record_file_path = None
+        # dirname = QFileDialog.getExistingDirectory(self)
+        dirname = os.getcwd()
+        if dirname:
+            self.record_file_path = dirname + '/test2.csv'
+            print(self.record_file_path)
+            # Write header only once
+            with open(self.record_file_path, 'w') as f:
+                f.write(','.join(self.csv_columns) + '\n')
 
     def stop_recording(self):
         # TEST 
         self.is_recording = False
-        cols = ["Dev1/ai"+str(i) for i in range(len(self.plots_refs))]
-        data = self.channels_data.T
-        df = pd.DataFrame(data,columns=cols)
-        fn = "test.csv"
-        dirname = QFileDialog.getExistingDirectory(self)
-        if dirname:
-            path = dirname + fn
-            df.to_csv(path,index=False)
-        n = self.n_channels_input.value()
-        self.channels_data = np.array([[] for _ in range(n)])
+        # cols = ["Dev1/ai"+str(i) for i in range(len(self.plots_refs))]
+        # data = self.channels_data.T
+        # df = pd.DataFrame(data,columns=cols)
+        # fn = "test.csv"
+        # dirname = QFileDialog.getExistingDirectory(self)
+        # if dirname:
+        #     path = dirname + '/' + fn
+        #     print(path)
+        #     df.to_csv(path,index=False)
+        # n = self.n_channels_input.value()
+        # self.channels_data = np.array([[] for _ in range(n)])
         self.record_btn.setEnabled(True)
 
     def update_plot(self):
@@ -178,25 +189,18 @@ class AcquireTab(QWidget):
                     self.plots_refs[i].setData(self.plot_data[i,:])
 
     def on_new_data(self, new_data):
-        n = len(new_data)
         new_data = np.array(new_data)
-        xlim = self.plot_xlim_input.value()
-        n_points = len(self.plot_data)
-        if self.n_channels_input.value() > 1: #REVISAR QUE CONDICIÓN APLIQUE PARA CASO CUANDO NDIM == 1 Y SIZE == 1
-            if n_points <= xlim:
-                self.plot_data = np.concatenate((self.plot_data,new_data),axis=1)
-            else:
-                delta = n_points - xlim
-                self.plot_data = np.roll(self.plot_data,-n,axis=1)
-                self.plot_data[:,-n:] = new_data
+        n = new_data.shape[1]
+        if new_data.shape[0] == self.n_channels_input.value():
+            # self.plot_data = np.concatenate((self.plot_data,new_data),axis=1)
+            self.plot_data = np.roll(self.plot_data,-n,axis=1)
+            self.plot_data[:,-n:] = new_data
             if self.is_recording:
-                self.channels_data = np.concatenate((self.channels_data,new_data),axis=1)
+                # self.channels_data = np.concatenate((self.channels_data,new_data),axis=1)
+                if self.is_recording and self.record_file_path:
+                    df = pd.DataFrame(new_data.T, columns=self.csv_columns)
+                    df.to_csv(self.record_file_path, mode='a', header=False, index=False)
         else:
-            if n_points <= xlim:
-                self.plot_data = np.concatenate((self.plot_data, new_data))
-            else:
-                delta = n_points - xlim
-                self.plot_data = np.roll(self.plot_data,-n)
-                self.plot_data[-n:] = new_data
+            self.plot_data = np.concatenate((self.plot_data, new_data))
             if self.is_recording:
                  self.channels_data = np.concatenate((self.channels_data,new_data))
