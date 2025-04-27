@@ -50,7 +50,7 @@ class AcquireTab(QWidget):
         # ---- DATA ---- #
         self.channels_data = np.array([])
         self.plot_data = np.zeros((1,50000))
-        self.plots_refs = [self.plot_widget.plot(np.array([]), pen="y")] # CREAR PEN ANTES
+        self.plots_refs = [self.plot_widget.plot(np.array([]), pen=QPen("yellow"))] # CREAR PEN ANTES
 
         # ---- CONFIG ---- #
         self.DAQ_connected = False
@@ -159,7 +159,6 @@ class AcquireTab(QWidget):
             f.write(','.join(self.csv_columns) + '\n')
 
     def stop_recording(self):
-        # TEST 
         self.is_recording = False
         self.record_btn.setEnabled(True)
         dirname = QFileDialog().getExistingDirectory()
@@ -178,19 +177,22 @@ class AcquireTab(QWidget):
 
     def on_new_data(self, new_data):
         new_data = np.array(new_data)
-        n = new_data.shape[1]
-        if new_data.shape[0] == self.n_channels_input.value():
-            self.plot_data = np.roll(self.plot_data,-n,axis=1)
-            self.plot_data[:,-n:] = new_data
+        try:
+            n = new_data.shape[1]
+            if new_data.shape[0] > 1:
+                self.plot_data = np.roll(self.plot_data,-n,axis=1)
+                self.plot_data[:,-n:] = new_data
+                if self.is_recording:
+                    if self.is_recording and self.record_file_path:
+                        df = pd.DataFrame(new_data.T, columns=self.csv_columns)
+                        df.to_csv(self.record_file_path, mode='a', header=False, index=False)
+        except:
+            n = new_data.shape[0]
+            self.plot_data = np.roll(self.plot_data,-n)
+            self.plot_data[-n,:] = new_data
             if self.is_recording:
-                if self.is_recording and self.record_file_path:
-                    df = pd.DataFrame(new_data.T, columns=self.csv_columns)
-                    df.to_csv(self.record_file_path, mode='a', header=False, index=False)
-        else:
-            # FIX
-            self.plot_data = np.concatenate((self.plot_data, new_data))
-            if self.is_recording:
-                 self.channels_data = np.concatenate((self.channels_data,new_data))
+                 df = pd.DataFrame(new_data.T, columns=self.csv_columns)
+                 df.to_csv(self.record_file_path, mode='a', header=False, index=False)
 
 from datetime import datetime
 import shutil
