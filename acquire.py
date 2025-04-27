@@ -2,11 +2,14 @@ from threading import Thread
 from PySide6.QtWidgets import(
     QCheckBox,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
+    QLineEdit,
     QPushButton,
     QSpinBox,
     QVBoxLayout,
@@ -152,19 +155,21 @@ class AcquireTab(QWidget):
     def start_recording(self):
         self.is_recording = True
         self.record_btn.setEnabled(False)
-        cols = ["Dev1/ai"+str(i) for i in range(len(self.plots_refs))]
-        self.csv_columns = cols
+        self.csv_columns = ["Dev1/ai"+str(i) for i in range(len(self.plots_refs))]
         self.record_file_path = None
-        dirname = os.getcwd() # ADD USER SELECT
-        if dirname:
-            self.record_file_path = dirname + '/test2.csv'
-            with open(self.record_file_path, 'w') as f:
-                f.write(','.join(self.csv_columns) + '\n')
+        self.record_file_path = './recording.csv'
+        with open(self.record_file_path, 'w') as f:
+            f.write(','.join(self.csv_columns) + '\n')
 
     def stop_recording(self):
         # TEST 
         self.is_recording = False
         self.record_btn.setEnabled(True)
+        dirname = QFileDialog().getExistingDirectory()
+        if dirname:
+            dlg = FileNameDialog(dirname)
+            dlg.exec()
+
 
     def update_plot(self):
         if self.stream_data_option.isChecked():
@@ -189,3 +194,33 @@ class AcquireTab(QWidget):
             self.plot_data = np.concatenate((self.plot_data, new_data))
             if self.is_recording:
                  self.channels_data = np.concatenate((self.channels_data,new_data))
+
+from datetime import datetime
+import shutil
+class FileNameDialog(QDialog):
+    def __init__(self, dirname):
+        super().__init__()
+        self.dirname = dirname
+
+        self.filename_input = QLineEdit()
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok)
+
+        now_str = datetime.now().strftime("%H:%m-%d-%M-%Y")
+        
+        button_box.accepted.connect(self.save_file)
+
+        self.filename_input.setText(f"{now_str}_ADM_DAQ_data")
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.filename_input)
+        layout.addWidget(button_box)
+        self.setLayout(layout)
+
+    def save_file(self):
+        filename = self.filename_input.value()
+        if filename:
+            src = "./recording.csv"
+            destination = self.dirname + "/" + filename
+            shutil.move(src,destination)
+            self.close()
+
