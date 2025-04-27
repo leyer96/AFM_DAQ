@@ -3,6 +3,7 @@ from plot_utils import calculate_grid_values
 
 class WorkerSignals(QObject):
     data = Signal(object)
+    error = Signal()
 
 class ProcessingWorker(QRunnable):
     def __init__(self, path, op, rows_to_skip=3):
@@ -14,8 +15,9 @@ class ProcessingWorker(QRunnable):
 
     @Slot()
     def run(self):
-        print("CALCULATING GRID VALUES")
-        Z = calculate_grid_values(self.path,self.op,self.rows_to_skip)
-        print("GRID VALUES CALCULATED")
-        self.signals.data.emit(Z)
+        try:
+            Z = calculate_grid_values(self.path,self.op,self.rows_to_skip)
+            self.signals.data.emit(Z)
+        except:
+            self.signals.error.emit()
     

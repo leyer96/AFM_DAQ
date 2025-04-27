@@ -5,6 +5,7 @@ from PySide6.QtWidgets import(
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QVBoxLayout,
     QWidget
@@ -168,8 +169,14 @@ class VisualizeTab(QWidget):
         self.choose_path_btn.setEnabled(False)
         worker = ProcessingWorker(path,op=op)
         worker.signals.data.connect(self.create_plots)
+        worker.signals.error.connect(self.handle_error)
         self.threadpool.start(worker)
 
+    def handle_error(self):
+        self.study_op.setEnabled(True)
+        self.choose_path_btn.setEnabled(True)
+        QMessageBox.critical(self, "Processing Error", "An error has occurred while processing the data. Try with a new set.")
+    
     def create_plots(self, Z):
         op = self.study_op.currentIndex()
         if op == 0:
