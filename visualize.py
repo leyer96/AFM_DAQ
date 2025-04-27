@@ -7,6 +7,7 @@ from PySide6.QtWidgets import(
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QProgressBar,
     QVBoxLayout,
     QWidget
 )
@@ -24,6 +25,7 @@ class VisualizeTab(QWidget):
         self.study_op = QComboBox()
         self.path_input = QLineEdit()
         self.choose_path_btn = QPushButton("Select Data")
+        self.progress_bar = QProgressBar()
         # TOPOGRAPHY OPTIONS
         self.topo_2D_op = QCheckBox("Topo 2D")
         self.topo_3D_op = QCheckBox("Topo 3D (new window)")
@@ -60,6 +62,7 @@ class VisualizeTab(QWidget):
         self.pfm_3D_amp_window = None
         self.pfm_3D_phase_window = None
         # CONFIG
+        self.progress_bar.hide()
         self.study_op.addItems(["Topography", "PFM"])
         self.path_input.setEnabled(False)
         self.topo_2D_op.setChecked(True)
@@ -134,6 +137,7 @@ class VisualizeTab(QWidget):
         layout.addLayout(x_layout2a)
         layout.addLayout(x_layout2b)
         layout.addLayout(x_layout3)
+        layout.addWidget(self.progress_bar)
         layout.addLayout(x_layout4)
         layout.addLayout(x_layout5)
         self.setLayout(layout)
@@ -167,17 +171,26 @@ class VisualizeTab(QWidget):
         op = self.study_op.currentIndex()
         self.study_op.setEnabled(False)
         self.choose_path_btn.setEnabled(False)
+        self.progress_bar.show()
         worker = ProcessingWorker(path,op=op)
         worker.signals.data.connect(self.create_plots)
         worker.signals.error.connect(self.handle_error)
+        worker.signals.progress.connect(self.update_progress_bar)
         self.threadpool.start(worker)
 
-    def handle_error(self):
+    def update_progress_bar(self, n):
+        self.progress_bar.setValue(n)
+    
+    def handle_error(self, err):
         self.study_op.setEnabled(True)
         self.choose_path_btn.setEnabled(True)
-        QMessageBox.critical(self, "Processing Error", "An error has occurred while processing the data. Try with a new set.")
+        self.progress_bar.reset()
+        self.progress_bar.hide()
+        QMessageBox.critical(self, "Processing Error", f"An error ({err}) has occurred while processing the data. Try with a new set.")
     
     def create_plots(self, Z):
+        self.progress_bar.reset()
+        self.progress_bar.hide()
         op = self.study_op.currentIndex()
         if op == 0:
             if self.topo_2D_op.isChecked():
