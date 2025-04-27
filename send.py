@@ -3,7 +3,7 @@ from PySide6.QtWidgets import(
     QGroupBox,
     QGridLayout,
     QLabel,
-    QPushButton,
+    QMessageBox,
     QWidget
 )
 from PySide6.QtCore import Qt, QThreadPool, QTimer
@@ -22,7 +22,7 @@ class SendDataTab(QWidget):
         # WIDGETS
         ## LOCK-IN 1 GROUP BOX
         self.lock_in1_config_widget = LockInConfigWidget(n="1")
-        self.lock_in2_config_widget = LockInConfigWidget(n="2")
+        # self.lock_in2_config_widget = LockInConfigWidget(n="2")
         
         ## Indicators Group Box
         indicators_group_box = QGroupBox("Indicators")
@@ -56,8 +56,8 @@ class SendDataTab(QWidget):
         self.amp_plot_widget.setFixedSize(300,300)
 
         # CONFIG
-        self.lock_in1_config_widget.setFixedWidth(500)
-        self.lock_in2_config_widget.setFixedWidth(500)
+        self.lock_in1_config_widget.setMaximumSize(500,250)
+        # self.lock_in2_config_widget.setFixedWidth(500)
         indicators_group_box.setFixedWidth(600)
         self.r_value.setReadOnly(True)
         self.theta_value.setReadOnly(True)
@@ -69,17 +69,18 @@ class SendDataTab(QWidget):
 
         # SIGNALS
         self.lock_in1_config_widget.address_input.currentTextChanged.connect(lambda address: self.connect_to_lockin(address,v="SR865"))
-        self.lock_in2_config_widget.address_input.currentTextChanged.connect(lambda address: self.connect_to_lockin(address,v="SR830"))
+        self.lock_in1_config_widget.run_btn.clicked.connect(self.start_sweep)
+        # self.lock_in2_config_widget.address_input.currentTextChanged.connect(lambda address: self.connect_to_lockin(address,v="SR830"))
 
         # LAYOUT
         layout = QGridLayout()
-        layout.addWidget(self.lock_in1_config_widget,0,0,1,3)
-        layout.addWidget(self.lock_in2_config_widget,0,3,1,3)
-        layout.addWidget(indicators_group_box,1,0,1,2)
-        layout.addWidget(self.phase_plot_widget,1,2,1,2)
-        layout.addWidget(self.amp_plot_widget,1,4,1,2)
-        # layout.setAlignment(self.lock_in1_config_widget,Qt.AlignHCenter)
-        layout.setAlignment(self.lock_in2_config_widget,Qt.AlignRight)
+        layout.addWidget(self.lock_in1_config_widget,0,0,1,6)
+        # layout.addWidget(self.lock_in2_config_widget,0,3,1,3)
+        layout.addWidget(indicators_group_box,2,0,1,2)
+        layout.addWidget(self.phase_plot_widget,2,2,1,2)
+        layout.addWidget(self.amp_plot_widget,2,4,1,2)
+        layout.setAlignment(self.lock_in1_config_widget,Qt.AlignHCenter)
+        # layout.setAlignment(self.lock_in2_config_widget,Qt.AlignRight)
         layout.setAlignment(indicators_group_box,Qt.AlignHCenter)
         layout.setAlignment(self.phase_plot_widget,Qt.AlignHCenter)
         layout.setAlignment(self.amp_plot_widget,Qt.AlignHCenter)
@@ -97,16 +98,11 @@ class SendDataTab(QWidget):
         self.timer.timeout.connect(self.update_plots)
 
         self.get_visa_resources()
-        
-        # TEST
-        test_btn = QPushButton('TEST')
-        layout.addWidget(test_btn,0,2,1,1)
-        test_btn.clicked.connect(self.start_sweep)
 
     def get_visa_resources(self):
         resources = visa.ResourceManager().list_resources()
         self.lock_in1_config_widget.address_input.addItems(resources)
-        self.lock_in2_config_widget.address_input.addItems(resources)
+        # self.lock_in2_config_widget.address_input.addItems(resources)
 
     def connect_to_lockin(self, address, v):
         if v == "SR865":
@@ -123,6 +119,7 @@ class SendDataTab(QWidget):
         # worker_lockin2 = LockinWorker(self.lockin2)
         worker_lockin1.signals.data.connect(self.on_new_data)
         worker_lockin1.signals.finished.connect(self.timer.stop)
+        worker_lockin1.signals.failed_connection.connect(lambda: QMessageBox.warning(self, "Connection Error", "No lock-in connection established."))
         # worker_lockin2.signals.data.connect(self.on_new_data)
         self.threadpool.start(worker_lockin1)
         # self.threadpool.start(worker_lockin2)

@@ -109,11 +109,9 @@ class SurfacePlotWindowMatplot(QWidget):
         ax.set_title(title)
         X = np.arange(Z.shape[0])
         Y = np.arange(Z.shape[1])
-        print(f"ORIGINAL Z SHAPE {Z.shape}")
         X, Y = np.meshgrid(X, Y)
         if Z.ndim == 3:
             Z = Z[:,:,0]
-        print(f"X SHAPE: {X.shape}; Y SHAPE: {Y.shape}; Z SHAPE {Z.shape}")
         surf = ax.plot_surface(X,Y,Z,cmap=cm.pink)
         fig.colorbar(surf,shrink=0.5,aspect=5)
         layout = QVBoxLayout()

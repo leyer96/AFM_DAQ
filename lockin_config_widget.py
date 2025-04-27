@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFormLayout,
     QGroupBox,
-    QLabel,
+    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -18,6 +18,7 @@ class LockInConfigWidget(QWidget):
         self.f0_input = QDoubleSpinBox()
         self.ff_input = QDoubleSpinBox()
         self.f_step_input = QDoubleSpinBox()
+        self.run_btn = QPushButton("Run")
         # LAYOUT
         form = QFormLayout()
         form.addRow("Instrument Address", self.address_input)
@@ -25,6 +26,7 @@ class LockInConfigWidget(QWidget):
         form.addRow("Initial Frequency (Hz.)", self.f0_input)
         form.addRow("Final Frequency (Hz.)", self.ff_input)
         form.addRow("Frequency Step (Hz.)", self.f_step_input)
+        form.addRow("",self.run_btn)
 
         group_box.setLayout(form)
         layout = QVBoxLayout()
