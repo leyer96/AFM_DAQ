@@ -38,7 +38,7 @@ class CmapWidget(pg.ImageView):
         self.h_line.sigPositionChangeFinished.connect(self.handle_h_line_change)
         self.v_line.sigPositionChangeFinished.connect(self.handle_v_line_change)
     
-    def setup_widget(self,img,color="pink"):
+    def setup_widget(self,img,color="YlOrBr"):
         self.image = img
         self.n_dim = img.ndim
         if self.n_dim == 2:
@@ -91,7 +91,7 @@ class SurfacePlotDialog(QDialog):
         y = np.arange(Z.shape[0])
         Z_min, Z_max = Z.min(), Z.max()
         Z_norm = (Z - Z_min) / (Z_max - Z_min)
-        cmap = cm.get_cmap("pink")
+        cmap = cm.get_cmap("YlOrBr")
         colors = cmap(Z_norm)[:, :, :3]
         
         surface = gl.GLSurfacePlotItem(x=x,y=y,z=Z,colors=colors)
@@ -107,12 +107,15 @@ class SurfacePlotWindowMatplot(QWidget):
         fig_canvas.setParent(self)
         ax = fig_canvas.figure.add_subplot(111,projection="3d")
         ax.set_title(title)
+        ax.set_xlabel("Pixel")
+        ax.set_ylabel("Pixel")
+        ax.set_zlabel("Height (V)")
         X = np.arange(Z.shape[0])
         Y = np.arange(Z.shape[1])
         X, Y = np.meshgrid(X, Y)
         if Z.ndim == 3:
             Z = Z[:,:,0]
-        surf = ax.plot_surface(X,Y,Z,cmap=cm.pink)
+        surf = ax.plot_surface(X,Y,Z,cmap=cm.YlOrBr)
         fig.colorbar(surf,shrink=0.5,aspect=5)
         layout = QVBoxLayout()
         layout.addWidget(NavigationToolbar(fig_canvas, self))
