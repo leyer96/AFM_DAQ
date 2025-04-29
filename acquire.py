@@ -15,15 +15,16 @@ from PySide6.QtWidgets import(
     QVBoxLayout,
     QWidget
 )
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, QThreadPool
 from PySide6.QtGui import QIcon, QPen
 from acquisition_thread import AcquisitionThread
+from recording_worker import RecordingWorker
 # from widgets import ConnectionStatusIndicator
 from utils import Paths
 import pyqtgraph as pg
 import numpy as np
-import pandas as pd
-import os
+from datetime import datetime
+import shutil
 
 
 class AcquireTab(QWidget):
@@ -50,26 +51,28 @@ class AcquireTab(QWidget):
         # ---- DATA ---- #
         self.channels_data = np.array([])
         self.plot_data = np.zeros((1,50000))
-        self.plots_refs = [self.plot_widget.plot(np.array([]), pen=QPen("yellow"))] # CREAR PEN ANTES
+        # self.plots_refs = [self.plot_widget.plot(np.array([]), pen=QPen("yellow"))] # CREAR PEN ANTES
+        self.plots_refs = [self.plot_widget.plot(np.array([]), pen="yellow")] # CREAR PEN ANTES
 
         # ---- CONFIG ---- #
         self.DAQ_connected = False
         self.is_recording = False
         self.is_streaming = False
         ## THREADS & TIMER
+        self.threadpool = QThreadPool()
         self.plot_timer = QTimer(self)
         self.plot_timer.timeout.connect(self.update_plot)
         ## INPUTS
         self.n_channels_input.setRange(1,8)
         self.n_channels_input.setValue(1)
         self.channel_selection_input.addItems(["All","Dev1/ai0", "Dev1/ai1", "Dev1/ai2", "Dev1/ai3", "Dev1/ai4", "Dev1/ai5"])
-        self.sample_rate_input.setRange(0,100000)
+        self.sample_rate_input.setRange(0,1.5E6)
         self.sample_rate_input.setValue(40000)
         self.min_input_value_input.setRange(-10,10)
         self.min_input_value_input.setValue(-10)
         self.max_input_value_input.setRange(-10,10)
         self.max_input_value_input.setValue(10)
-        self.n_samples_input.setRange(0,999999)
+        self.n_samples_input.setRange(0,1.5E6)
         self.n_samples_input.setValue(40000)
         ## ICONS
         self.record_btn.setIcon(QIcon(Paths.icon("control-record.png")))
@@ -113,7 +116,8 @@ class AcquireTab(QWidget):
         arr = [[] for _ in range(n)]
         self.channels_data = np.array(arr)
         self.plot_data = np.zeros((n,50000))
-        pens = [QPen("yellow"),QPen("green"),QPen("blue"),QPen("red"), QPen("white"), QPen("pink"), QPen("orange"), QPen("gray")] # CAMBIAR A PEN
+        pens = ["yellow","green","blue","red","white","pink","orange","gray"]
+        # pens = [QPen("yellow"),QPen("green"),QPen("blue"),QPen("red"), QPen("white"), QPen("pink"), QPen("orange"), QPen("gray")] # CAMBIAR A PEN
         self.plots_refs = [self.plot_widget.plot(np.array([]), pen=pens[i]) for i in range(n)]
 
     def set_plot_xrange(self, lim):
@@ -184,18 +188,16 @@ class AcquireTab(QWidget):
                 self.plot_data[:,-n:] = new_data
                 if self.is_recording:
                     if self.is_recording and self.record_file_path:
-                        df = pd.DataFrame(new_data.T, columns=self.csv_columns)
-                        df.to_csv(self.record_file_path, mode='a', header=False, index=False)
+                        recording_worker = RecordingWorker(filepath=self.record_file_path,csv_columns=self.csv_columns,new_data=new_data)
+                        self.threadpool.start(recording_worker)
         except:
             n = new_data.shape[0]
             self.plot_data = np.roll(self.plot_data,-n)
-            self.plot_data[-n,:] = new_data
+            self.plot_data[-n:] = new_data.T
             if self.is_recording:
-                 df = pd.DataFrame(new_data.T, columns=self.csv_columns)
-                 df.to_csv(self.record_file_path, mode='a', header=False, index=False)
+                recording_worker = RecordingWorker(filepath=self.record_file_path,csv_columns=self.csv_columns,new_data=new_data)
+                self.threadpool.start(recording_worker)
 
-from datetime import datetime
-import shutil
 class FileNameDialog(QDialog):
     def __init__(self, dirname):
         super().__init__()
