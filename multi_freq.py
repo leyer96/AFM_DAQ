@@ -95,9 +95,12 @@ class MultiFreqTab(QWidget):
         self.fs2 = np.array([])
         self.thetas2 = np.array([])
         self.rs2 = np.array([])
+        self.amp_plot2 = self.amp_plot_widget.add_extra_plot()
+        self.phase_plot2 = self.phase_plot_widget.add_extra_plot()
 
         # THREADPOOL
         self.threadpool = QThreadPool()
+        self.workers_plotting = [False, False]
         # TIMER
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_plots)
@@ -124,14 +127,15 @@ class MultiFreqTab(QWidget):
         l2_f0 = self.lock_in2_config_widget.f0_input.value()
         l2_ff = self.lock_in2_config_widget.ff_input.value()
         l2_f_step = self.lock_in2_config_widget.f_step_input.value()
+        self.workers_plotting = [True, True]
         worker_lockin1 = LockinWorker(lockin=self.lockin1,sine_output=l1_amp,f0=l1_f0,ff=l1_ff,f_step=l1_f_step)
-        worker_lockin2 = Lockin830Worker(self.lockin2,sine_output=l2_amp,f0=l2_f0,ff=l2_ff,f_step=l2_f_step)
         worker_lockin1.signals.data.connect(self.on_new_data)
-        worker_lockin1.signals.finished.connect(self.timer.stop)
+        worker_lockin1.signals.finished.connect(lambda: self.stop_plotting(worker_n=0))
         worker_lockin1.signals.failed_connection.connect(lambda: QMessageBox.warning(self, "Connection Error", "No lock-in connection established."))
+        worker_lockin2 = Lockin830Worker(self.lockin2,sine_output=l2_amp,f0=l2_f0,ff=l2_ff,f_step=l2_f_step)
         worker_lockin2.signals.data.connect(lambda data: self.on_new_data(data, n=2))
-        worker_lockin2.signals.finished.connect(self.timer.stop)
-        # self.threadpool.start(worker_lockin1)
+        worker_lockin2.signals.finished.connect(lambda: self.stop_plotting(worker_n=1))
+        self.threadpool.start(worker_lockin1)
         self.threadpool.start(worker_lockin2)
         self.timer.start(1000)
 
@@ -148,3 +152,12 @@ class MultiFreqTab(QWidget):
     def update_plots(self):
         self.phase_plot_widget.update_plot(self.fs, self.thetas)
         self.amp_plot_widget.update_plot(self.fs, self.rs)
+        self.phase_plot2.setData(self.fs, self.thetas2)
+        self.amp_plot2.setData(self.fs, self.rs2)
+
+    def stop_plotting(self, worker_n):
+        self.workers_plotting[worker_n] = False
+        w1_status = self.workers_plotting[0]
+        w2_status = self.workers_plotting[1]
+        if not (w1_status and w2_status):
+            self.timer.stop()

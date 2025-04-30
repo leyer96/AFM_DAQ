@@ -22,6 +22,10 @@ class ScatterPlotWidget(pg.PlotWidget):
         self.plot_item.clear()
         self.plot_item.setData(x,y)
 
+    def add_extra_plot(self):
+        p2 =  self.plot()
+        return p2
+
 class CmapWidget(pg.ImageView):
     h_values = Signal(list)
     v_values = Signal(list)
