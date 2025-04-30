@@ -4,8 +4,10 @@ from time import sleep
 
 class WorkerSignals(QObject):
     data = Signal(object)
+    finished = Signal()
+    error = Signal()
 
-class LockinWorker(QRunnable):
+class Lockin830Worker(QRunnable):
     def __init__(self,lockin=None,sine_output=0,f0=0,ff=0,f_step=0):
         super().__init__()
         self.signals = WorkerSignals()
@@ -23,10 +25,13 @@ class LockinWorker(QRunnable):
             for f in self.fs:
                 self.lockin.frequency = f
                 sleep(0.1)
-                values = self.lockin.snap(val1="R",val2="THeta",val3="PHAse")
+                # values = self.lockin.snap(val1="R",val2="THeta",val3="PHAse")
+                values = self.lockin.snap(val1="R",val2="THeta")
+                print(values)
                 data = {
                     "r": values[0],
                     "theta": values[1],
                     "f": f
                 }
                 self.signals.data.emit(data)
+            self.signals.finished.emit()
