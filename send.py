@@ -57,7 +57,6 @@ class SendDataTab(QWidget):
 
         # CONFIG
         self.lock_in1_config_widget.setMaximumSize(500,250)
-        # self.lock_in2_config_widget.setFixedWidth(500)
         indicators_group_box.setFixedWidth(600)
         self.r_value.setReadOnly(True)
         self.theta_value.setReadOnly(True)
@@ -69,6 +68,7 @@ class SendDataTab(QWidget):
 
         # SIGNALS
         self.lock_in1_config_widget.run_btn.clicked.connect(self.start_sweep)
+        self.lock_in1_config_widget.address_input.currentTextChanged.connect(self.connect_to_lockin)
 
         # LAYOUT
         layout = QGridLayout()
@@ -89,6 +89,7 @@ class SendDataTab(QWidget):
 
         # THREADPOOL
         self.threadpool = QThreadPool()
+        
         # TIMER
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_plots)
@@ -99,11 +100,8 @@ class SendDataTab(QWidget):
         resources = visa.ResourceManager().list_resources()
         self.lock_in1_config_widget.address_input.addItems(resources)
 
-    def connect_to_lockin(self, address, v):
-        if v == "SR865":
-            self.lockin1 = SR865("visa", address)
-        elif v == "SR830":
-            self.lockin2 = SR830("visa", address)
+    def connect_to_lockin(self, address):
+        self.lockin1 = SR865("visa", address)
 
     def start_sweep(self):
         l1_amp = self.lock_in1_config_widget.output_amp_input.value()
