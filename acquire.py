@@ -50,7 +50,7 @@ class AcquireTab(QWidget):
         
         # ---- DATA ---- #
         self.channels_data = np.array([])
-        self.plot_data = np.zeros((1,50000))
+        self.plot_data = np.zeros(50000)
         # self.plots_refs = [self.plot_widget.plot(np.array([]), pen=QPen("yellow"))] # CREAR PEN ANTES
         self.plots_refs = [self.plot_widget.plot(np.array([]), pen="yellow")] # CREAR PEN ANTES
 
@@ -115,7 +115,10 @@ class AcquireTab(QWidget):
     def set_n_of_channels(self,n):
         arr = [[] for _ in range(n)]
         self.channels_data = np.array(arr)
-        self.plot_data = np.zeros((n,50000))
+        if n == 1:
+            self.plot_data = np.zeros(50000)
+        else:
+            self.plot_data = np.zeros((n,50000))
         pens = ["yellow","green","blue","red","white","pink","orange","gray"]
         # pens = [QPen("yellow"),QPen("green"),QPen("blue"),QPen("red"), QPen("white"), QPen("pink"), QPen("orange"), QPen("gray")] # CAMBIAR A PEN
         self.plots_refs = [self.plot_widget.plot(np.array([]), pen=pens[i]) for i in range(n)]
@@ -148,7 +151,7 @@ class AcquireTab(QWidget):
 
     def stop_acquisition(self):
         if self.is_streaming:
-            self.acquisition_thread.stop()
+            # self.acquisition_thread.stop()
             self.acquisition_thread.close()
             self.is_streaming = False
             self.n_channels_input.setEnabled(True)
@@ -193,7 +196,7 @@ class AcquireTab(QWidget):
         except:
             n = new_data.shape[0]
             self.plot_data = np.roll(self.plot_data,-n)
-            self.plot_data[-n:] = new_data.T
+            self.plot_data[-n:] = new_data
             if self.is_recording:
                 recording_worker = RecordingWorker(filepath=self.record_file_path,csv_columns=self.csv_columns,new_data=new_data)
                 self.threadpool.start(recording_worker)
@@ -218,10 +221,10 @@ class FileNameDialog(QDialog):
         self.setLayout(layout)
 
     def save_file(self):
-        filename = self.filename_input.value()
+        filename = self.filename_input.text()
         if filename:
             src = "./recording.csv"
-            destination = self.dirname + "/" + filename
+            destination = self.dirname + "/" + filename + ".csv"
             shutil.move(src,destination)
             self.close()
 

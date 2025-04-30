@@ -9,10 +9,10 @@ from PySide6.QtWidgets import(
 from PySide6.QtCore import Qt, QThreadPool, QTimer
 from plot_widgets import ScatterPlotWidget
 from lockin_worker import LockinWorker
-from srsinst.sr860 import SR865
+# from srsinst.sr860 import SR865
 from lockin_config_widget import LockInConfigWidget
-import pymeasure.instruments.srs.sr830 as SR830
-import pyvisa as visa
+# import pymeasure.instruments.srs.sr830 as SR830
+# import pyvisa as visa
 import numpy as np
 
 class SendDataTab(QWidget):
@@ -68,7 +68,7 @@ class SendDataTab(QWidget):
         self.curr_harmonic.setReadOnly(True)
 
         # SIGNALS
-        self.lock_in1_config_widget.address_input.currentTextChanged.connect(lambda address: self.connect_to_lockin(address,v="SR865"))
+        # self.lock_in1_config_widget.address_input.currentTextChanged.connect(lambda address: self.connect_to_lockin(address,v="SR865"))
         self.lock_in1_config_widget.run_btn.clicked.connect(self.start_sweep)
         # self.lock_in2_config_widget.address_input.currentTextChanged.connect(lambda address: self.connect_to_lockin(address,v="SR830"))
 
@@ -97,7 +97,7 @@ class SendDataTab(QWidget):
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_plots)
 
-        self.get_visa_resources()
+        # self.get_visa_resources()
 
     def get_visa_resources(self):
         resources = visa.ResourceManager().list_resources()
