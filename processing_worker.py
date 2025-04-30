@@ -74,7 +74,11 @@ class ProcessingWorker(QRunnable):
                         ps = pixel_indexes[i,j]
                         pe = pixel_indexes[i,j+1]
                         height[i,j] = np.mean(height_data[ps:pe])
-                Z = height
+                print(f"HEIGHT MIN: {np.min(np.abs(height))}")
+                Z = height * -1090.91 
+                Z += np.max(np.abs(Z))
+                # Z = (height - np.max(np.abs(height))) * -1090.91 
+                # Z = height 
                 # Z = remove_linear_trend(height)
             elif op == 1:
                 # AMP & PHASE
