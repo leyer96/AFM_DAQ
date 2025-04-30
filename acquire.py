@@ -151,7 +151,7 @@ class AcquireTab(QWidget):
 
     def stop_acquisition(self):
         if self.is_streaming:
-            # self.acquisition_thread.stop()
+            self.acquisition_thread.stop()
             self.acquisition_thread.close()
             self.is_streaming = False
             self.n_channels_input.setEnabled(True)

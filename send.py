@@ -9,10 +9,10 @@ from PySide6.QtWidgets import(
 from PySide6.QtCore import Qt, QThreadPool, QTimer
 from plot_widgets import ScatterPlotWidget
 from lockin_worker import LockinWorker
-# from srsinst.sr860 import SR865
+from srsinst.sr860 import SR865
 from lockin_config_widget import LockInConfigWidget
-# import pymeasure.instruments.srs.sr830 as SR830
-# import pyvisa as visa
+import pymeasure.instruments.srs.sr830 as SR830
+import pyvisa as visa
 import numpy as np
 
 class SendDataTab(QWidget):
@@ -68,19 +68,15 @@ class SendDataTab(QWidget):
         self.curr_harmonic.setReadOnly(True)
 
         # SIGNALS
-        # self.lock_in1_config_widget.address_input.currentTextChanged.connect(lambda address: self.connect_to_lockin(address,v="SR865"))
         self.lock_in1_config_widget.run_btn.clicked.connect(self.start_sweep)
-        # self.lock_in2_config_widget.address_input.currentTextChanged.connect(lambda address: self.connect_to_lockin(address,v="SR830"))
 
         # LAYOUT
         layout = QGridLayout()
         layout.addWidget(self.lock_in1_config_widget,0,0,1,6)
-        # layout.addWidget(self.lock_in2_config_widget,0,3,1,3)
         layout.addWidget(indicators_group_box,2,0,1,2)
         layout.addWidget(self.phase_plot_widget,2,2,1,2)
         layout.addWidget(self.amp_plot_widget,2,4,1,2)
         layout.setAlignment(self.lock_in1_config_widget,Qt.AlignHCenter)
-        # layout.setAlignment(self.lock_in2_config_widget,Qt.AlignRight)
         layout.setAlignment(indicators_group_box,Qt.AlignHCenter)
         layout.setAlignment(self.phase_plot_widget,Qt.AlignHCenter)
         layout.setAlignment(self.amp_plot_widget,Qt.AlignHCenter)
@@ -97,12 +93,11 @@ class SendDataTab(QWidget):
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_plots)
 
-        # self.get_visa_resources()
+        self.get_visa_resources()
 
     def get_visa_resources(self):
         resources = visa.ResourceManager().list_resources()
         self.lock_in1_config_widget.address_input.addItems(resources)
-        # self.lock_in2_config_widget.address_input.addItems(resources)
 
     def connect_to_lockin(self, address, v):
         if v == "SR865":
@@ -116,13 +111,10 @@ class SendDataTab(QWidget):
         l1_ff = self.lock_in1_config_widget.ff_input.value()
         l1_f_step = self.lock_in1_config_widget.f_step_input.value()
         worker_lockin1 = LockinWorker(lockin=self.lockin1,sine_output=l1_amp,f0=l1_f0,ff=l1_ff,f_step=l1_f_step)
-        # worker_lockin2 = LockinWorker(self.lockin2)
         worker_lockin1.signals.data.connect(self.on_new_data)
         worker_lockin1.signals.finished.connect(self.timer.stop)
         worker_lockin1.signals.failed_connection.connect(lambda: QMessageBox.warning(self, "Connection Error", "No lock-in connection established."))
-        # worker_lockin2.signals.data.connect(self.on_new_data)
         self.threadpool.start(worker_lockin1)
-        # self.threadpool.start(worker_lockin2)
         self.timer.start(1000)
 
     def on_new_data(self, data):

@@ -76,7 +76,7 @@ class MultiFreqTab(QWidget):
 
         # LAYOUT
         layout = QGridLayout()
-        layout.addWidget(self.lock_in1_config_widget,0,0,1,6)
+        layout.addWidget(self.lock_in1_config_widget,0,0,1,3)
         layout.addWidget(self.lock_in2_config_widget,0,3,1,3)
         layout.addWidget(indicators_group_box,2,0,1,2)
         layout.addWidget(self.phase_plot_widget,2,2,1,2)
@@ -95,9 +95,6 @@ class MultiFreqTab(QWidget):
         self.fs2 = np.array([])
         self.thetas2 = np.array([])
         self.rs2 = np.array([])
-        
-        #LOCKIN
-        self.lockin2 = SR830("GPIB0::8::INSTR")
 
         # THREADPOOL
         self.threadpool = QThreadPool()

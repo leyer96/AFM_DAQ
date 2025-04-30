@@ -15,7 +15,6 @@ def get_signal_indexes_numpy(data):
     indexes[::2] += 1
     return indexes
 
-
 def remove_linear_trend(Z):
     rows,cols = Z.shape
     # REV
