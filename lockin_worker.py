@@ -28,7 +28,7 @@ class LockinWorker(QRunnable):
             while self.running:
                 for f in self.fs:
                     self.lockin.ref.frequency = f
-                    sleep(0.1)
+                    sleep((1.5/self.n_steps)*10**-3)
                     r = self.lockin.data.value[2]
                     theta = self.lockin.data.value["Theta"]
                     data = {
