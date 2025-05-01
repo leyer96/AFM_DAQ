@@ -4,6 +4,7 @@ from PySide6.QtWidgets import(
     QGridLayout,
     QLabel,
     QMessageBox,
+    QPushButton,
     QWidget
 )
 from PySide6.QtCore import Qt, QThreadPool, QTimer
@@ -55,6 +56,9 @@ class MultiFreqTab(QWidget):
         self.amp_plot_widget = ScatterPlotWidget(title="Phase vs Frequency", xlabel="Frequency", ylabel="Phase")
         self.phase_plot_widget.setFixedSize(300,300)
         self.amp_plot_widget.setFixedSize(300,300)
+        ## BTNS
+        self.start_btn = QPushButton("Start Sweep")
+        self.stop_btn = QPushButton("Stop Sweep")
 
         # CONFIG
         self.lock_in1_config_widget.setMaximumSize(500,250)
@@ -67,12 +71,14 @@ class MultiFreqTab(QWidget):
         self.curr_v.setReadOnly(True)
         self.max_amp.setReadOnly(True)
         self.curr_harmonic.setReadOnly(True)
+        self.lock_in1_config_widget.run_btn.hide()
+        self.lock_in2_config_widget.run_btn.hide()
 
         # SIGNALS
         self.lock_in1_config_widget.address_input.currentTextChanged.connect(lambda address: self.connect_to_lockin(address,v="SR865"))
-        self.lock_in1_config_widget.run_btn.clicked.connect(self.start_sweep)
         self.lock_in2_config_widget.address_input.currentTextChanged.connect(lambda address: self.connect_to_lockin(address,v="SR830"))
-        self.lock_in2_config_widget.run_btn.clicked.connect(self.start_sweep)
+        self.start_btn.clicked.connect(self.start_sweep)
+        self.stop_btn.clicked.connect(self.stop_sweep)
 
         # LAYOUT
         layout = QGridLayout()
@@ -81,6 +87,8 @@ class MultiFreqTab(QWidget):
         layout.addWidget(indicators_group_box,2,0,1,2)
         layout.addWidget(self.phase_plot_widget,2,2,1,2)
         layout.addWidget(self.amp_plot_widget,2,4,1,2)
+        layout.addWidget(self.start_btn,3,0,1,2)
+        layout.addWidget(self.stop_btn,4,0,1,2)
         layout.setAlignment(self.lock_in1_config_widget,Qt.AlignHCenter)
         layout.setAlignment(self.lock_in2_config_widget,Qt.AlignRight)
         layout.setAlignment(indicators_group_box,Qt.AlignHCenter)
@@ -128,19 +136,31 @@ class MultiFreqTab(QWidget):
         l2_ff = self.lock_in2_config_widget.ff_input.value()
         l2_f_step = self.lock_in2_config_widget.f_step_input.value()
         self.workers_plotting = [True, True]
-        worker_lockin1 = LockinWorker(lockin=self.lockin1,sine_output=l1_amp,f0=l1_f0,ff=l1_ff,f_step=l1_f_step)
-        worker_lockin1.signals.data.connect(self.on_new_data)
-        worker_lockin1.signals.finished.connect(lambda: self.stop_plotting(worker_n=0))
-        worker_lockin1.signals.failed_connection.connect(lambda: QMessageBox.warning(self, "Connection Error", "No lock-in connection established."))
-        worker_lockin2 = Lockin830Worker(self.lockin2,sine_output=l2_amp,f0=l2_f0,ff=l2_ff,f_step=l2_f_step)
-        worker_lockin2.signals.data.connect(lambda data: self.on_new_data(data, n=2))
-        worker_lockin2.signals.finished.connect(lambda: self.stop_plotting(worker_n=1))
-        self.threadpool.start(worker_lockin1)
-        self.threadpool.start(worker_lockin2)
+        self.worker_lockin1 = LockinWorker(lockin=self.lockin1,sine_output=l1_amp,f0=l1_f0,ff=l1_ff,f_step=l1_f_step)
+        self.worker_lockin2 = Lockin830Worker(self.lockin2,sine_output=l2_amp,f0=l2_f0,ff=l2_ff,f_step=l2_f_step)
+        workers = [self.worker_lockin1, self.worker_lockin2]
+        for index,worker in enumerate(workers):
+            worker.signals.data.connect(lambda data: self.on_new_data(data,n=index))
+            worker.signals.restart.connect(lambda: self.restart_plot(n=index))
+            worker.signals.finished.connect(lambda: self.stop_plotting(n=index))
+            worker.signals.failed_connection.connect(lambda: QMessageBox.warning(self, "Connection Error", "No lock-in connection established."))
+        # worker_lockin1.signals.data.connect(self.on_new_data)
+        # worker_lockin1.signals.restart.connect(self.restart_plot)
+        # worker_lockin1.signals.finished.connect(lambda: self.stop_plotting(worker_n=0))
+        # worker_lockin1.signals.failed_connection.connect(lambda: QMessageBox.warning(self, "Connection Error", "No lock-in connection established."))
+        # worker_lockin2.signals.data.connect(lambda data: self.on_new_data(data, n=2))
+        # worker_lockin2.signals.restart.connect(lambda: self.restart_plot)
+        # worker_lockin2.signals.finished.connect(lambda: self.stop_plotting(worker_n=1))
+        self.threadpool.start(self.worker_lockin1)
+        self.threadpool.start(self.worker_lockin2)
         self.timer.start(1000)
 
-    def on_new_data(self, data, n=1):
-        if n == 1:
+    def stop_sweep(self):
+        self.worker_lockin1.running = False
+        self.worker_lockin2.running = False
+
+    def on_new_data(self, data, n=0):
+        if n == 0:
             self.fs = np.append(self.fs,data["f"])
             self.thetas = np.append(self.thetas, data["theta"])
             self.rs = np.append(self.rs, data["r"])
@@ -155,8 +175,16 @@ class MultiFreqTab(QWidget):
         self.phase_plot2.setData(self.fs, self.thetas2)
         self.amp_plot2.setData(self.fs, self.rs2)
 
-    def stop_plotting(self, worker_n):
-        self.workers_plotting[worker_n] = False
+    def restart_plot(self,n=0):
+        if n == 0:
+            self.thetas = np.array([])
+            self.rs = np.array([])
+        else:
+            self.thetas2 = np.array([])
+            self.rs2 = np.array([])
+    
+    def stop_plotting(self, n=0):
+        self.workers_plotting[n] = False
         w1_status = self.workers_plotting[0]
         w2_status = self.workers_plotting[1]
         if not (w1_status and w2_status):
