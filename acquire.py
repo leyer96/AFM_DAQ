@@ -1,4 +1,3 @@
-from threading import Thread
 from PySide6.QtWidgets import(
     QCheckBox,
     QComboBox,
@@ -152,7 +151,6 @@ class AcquireTab(QWidget):
     def stop_acquisition(self):
         if self.is_streaming:
             self.acquisition_thread.stop()
-            self.acquisition_thread.close()
             self.is_streaming = False
             self.n_channels_input.setEnabled(True)
 
@@ -184,6 +182,7 @@ class AcquireTab(QWidget):
 
     def on_new_data(self, new_data):
         new_data = np.array(new_data)
+        print(f"NEW DATA SHAPE: {new_data.shape}")
         try:
             n = new_data.shape[1]
             if new_data.shape[0] > 1:

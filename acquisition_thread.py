@@ -2,7 +2,7 @@ from PySide6.QtCore import QThread, Signal, Slot
 # from nidaqmx import Task
 # from nidaqmx.constants import TerminalConfiguration, AcquisitionType
 import numpy as np
-AI_CHANNELS = ['Dev1/ai0', 'Dev1/ai1', 'Dev1/ai2', 'Dev1/ai3', 'Dev1/ai4']
+AI_CHANNELS = ['Dev1/ai0', 'Dev1/ai1', 'Dev1/ai2', 'Dev1/ai3', 'Dev1/ai4', 'Dev1/ai5', 'Dev1/ai6', 'Dev1/ai7']
 class AcquisitionThread(QThread):
     data = Signal(list)
     def __init__(self,n_channels=1,min_v=-10,max_v=10,sample_rate=1000,n_samples=1):
@@ -21,9 +21,11 @@ class AcquisitionThread(QThread):
     def run(self):
         try:
             while True:
-                data = self.task.read(number_of_samples_per_channel=self.n_samples)
-                self.data.emit(data)
-                if not self.is_running:
+                if self.is_running:
+                    data = self.task.read(number_of_samples_per_channel=self.n_samples)
+                    self.data.emit(data)
+                else:
+                    self.task.close()
                     return
         except KeyboardInterrupt:
             print("ACQUISITION ABORTED")

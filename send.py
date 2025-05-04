@@ -68,6 +68,7 @@ class SendDataTab(QWidget):
 
         # SIGNALS
         self.lock_in1_config_widget.run_btn.clicked.connect(self.start_sweep)
+        self.lock_in1_config_widget.stop_btn.clicked.connect(self.stop_sweep)
         self.lock_in1_config_widget.address_input.currentTextChanged.connect(self.connect_to_lockin)
 
         # LAYOUT
@@ -89,10 +90,6 @@ class SendDataTab(QWidget):
 
         # THREADPOOL
         self.threadpool = QThreadPool()
-        
-        # TIMER
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.update_plots)
 
         self.get_visa_resources()
 
@@ -108,12 +105,14 @@ class SendDataTab(QWidget):
         l1_f0 = self.lock_in1_config_widget.f0_input.value()
         l1_ff = self.lock_in1_config_widget.ff_input.value()
         l1_f_step = self.lock_in1_config_widget.f_step_input.value()
-        worker_lockin1 = LockinWorker(lockin=self.lockin1,sine_output=l1_amp,f0=l1_f0,ff=l1_ff,f_step=l1_f_step)
-        worker_lockin1.signals.data.connect(self.on_new_data)
-        worker_lockin1.signals.finished.connect(self.timer.stop)
-        worker_lockin1.signals.failed_connection.connect(lambda: QMessageBox.warning(self, "Connection Error", "No lock-in connection established."))
-        self.threadpool.start(worker_lockin1)
-        self.timer.start(1000)
+        self.fs = np.array([])
+        self.rs = np.array([])
+        self.thetas = np.array([])
+        self.worker_lockin1 = LockinWorker(lockin=self.lockin1,sine_output=l1_amp,f0=l1_f0,ff=l1_ff,f_step=l1_f_step)
+        self.worker_lockin1.signals.data.connect(self.on_new_data)
+        self.worker_lockin1.signals.finished.connect(self.update_plots)
+        self.worker_lockin1.signals.failed_connection.connect(lambda: QMessageBox.warning(self, "Connection Error", "No lock-in connection established."))
+        self.threadpool.start(self.worker_lockin1)
 
     def on_new_data(self, data):
         self.fs = np.append(self.fs,data["f"])
@@ -123,3 +122,6 @@ class SendDataTab(QWidget):
     def update_plots(self):
         self.phase_plot_widget.update_plot(self.fs, self.thetas)
         self.amp_plot_widget.update_plot(self.fs, self.rs)
+
+    def stop_sweep(self):
+        self.worker_lockin1.running = False

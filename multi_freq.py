@@ -73,6 +73,8 @@ class MultiFreqTab(QWidget):
         self.curr_harmonic.setReadOnly(True)
         self.lock_in1_config_widget.run_btn.hide()
         self.lock_in2_config_widget.run_btn.hide()
+        self.lock_in1_config_widget.stop_btn.hide()
+        self.lock_in2_config_widget.stop_btn.hide()
 
         # SIGNALS
         self.lock_in1_config_widget.address_input.currentTextChanged.connect(lambda address: self.connect_to_lockin(address,v="SR865"))

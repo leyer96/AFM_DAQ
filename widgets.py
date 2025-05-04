@@ -1,6 +1,4 @@
 from PySide6.QtWidgets import (
-    QHBoxLayout,
-    QLabel,
     QWidget
     )
 from PySide6.QtCore import Qt
