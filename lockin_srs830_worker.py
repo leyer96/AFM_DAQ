@@ -25,11 +25,10 @@ class Lockin830Worker(QRunnable):
     def run(self):
         if self.lockin.id:
             self.lockin.sine_voltage = self.sine_output
-            while self.running:
-                for f in self.fs:
+            for f in self.fs:
+                if self.running:
                     self.lockin.frequency = f
-                    sleep((1.5/self.n_steps)*10**-3)
-                    # values = self.lockin.snap(val1="R",val2="THeta",val3="PHAse")
+                    sleep(0.01)
                     values = self.lockin.snap(val1="R",val2="THeta")
                     data = {
                         "r": values[0],
@@ -37,5 +36,7 @@ class Lockin830Worker(QRunnable):
                         "f": f
                     }
                     self.signals.data.emit(data)
-                self.signals.restart.emit()
+                else:
+                    break
+        else:
             self.signals.finished.emit()

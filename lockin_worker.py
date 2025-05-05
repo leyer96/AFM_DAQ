@@ -25,10 +25,10 @@ class LockinWorker(QRunnable):
     def run(self):
         if self.lockin.check_id():
             self.lockin.ref.sine_out_amplitude = self.sine_output
-            while self.running:
-                for f in self.fs:
+            for f in self.fs:
+                if self.running:
                     self.lockin.ref.frequency = f
-                    sleep((1.5/self.n_steps)*10**-3)
+                    sleep(0.01)
                     r = self.lockin.data.value[2]
                     theta = self.lockin.data.value["Theta"]
                     data = {
@@ -37,7 +37,8 @@ class LockinWorker(QRunnable):
                         "f": f
                     }
                     self.signals.data.emit(data)
-                self.signals.restart.emit()
+                else:
+                    break
             self.signals.finished.emit()
         else:
             self.signals.failed_connection.emit()
