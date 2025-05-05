@@ -230,11 +230,13 @@ class VisualizeTab(QWidget):
             frequencies = data["fs"]
             psd = data["psd"]
             noise = data["noise"]
+            k = data["k"]
             x = np.arange(1,noise.size+1)
             noise_plot = self.psd_plot_widget.addPlot(row=0,col=0,x=x,y=noise,units="V")
             noise_plot.setLabel('top', 'Data Number')
             noise_plot.setLabel('left', 'Voltage', units='V')
-            psd_plot = self.psd_plot_widget.addPlot(row=1,col=0,x=frequencies,y=psd,units="Hz")
+            self.psd_plot_widget.addLabel(f"Spring K constant: {np.round(k,4)}",row=1,col=0)
+            psd_plot = self.psd_plot_widget.addPlot(row=2,col=0,x=frequencies,y=psd,units="Hz")
             psd_plot.setLabel('bottom', 'Frequency', units='Hz')
             psd_plot.setLabel('left', 'Amplitude', units='V')
         self.study_op.setEnabled(True)

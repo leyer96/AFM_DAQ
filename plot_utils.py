@@ -5,13 +5,15 @@ def load_data(path,rows_to_skip=None):
     data = np.array([])
     try:
         if rows_to_skip:
-            data = pd.read_csv(path, skiprows=rows_to_skip)
+            data = pd.read_csv(path, skiprows=rows_to_skip, dtype=np.float64)
         else:
-            data = pd.read_csv(path)
-        data["Dev1/ai0"].to_numpy()
+            data = pd.read_csv(path,dtype=np.float64)
     except Exception as e:
+        print("EXCEPTION RAISED WHILE LOADING")
+        print(e)
         return None
     else:
+        print("SUCCESFUL LOADING")
         return data
 
 def get_signal_indexes_numpy(data):

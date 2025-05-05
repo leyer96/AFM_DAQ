@@ -18,8 +18,8 @@ class ProcessingWorker(QRunnable):
     def run(self):
         path = self.path
         op = self.op
+        self.signals.progress.emit(10)
         try:
-            self.signals.progress.emit(10)
             try:
                 for i in range(5):
                     if i > 0:
@@ -33,7 +33,7 @@ class ProcessingWorker(QRunnable):
                 self.signals.error.emit("ERROR PRESENTED WHILE LOADING DATASET")
             else:
                 self.signals.progress.emit(50)
-            if op == 2:
+            if op == 2: # PSD processing
                 noise = data["Dev1/ai0"].to_numpy()
                 psd_data = get_psd(noise)
                 self.signals.data.emit(psd_data)
@@ -43,9 +43,6 @@ class ProcessingWorker(QRunnable):
             line_data = data["Dev1/ai1"].to_numpy()
             pixel_data = data["Dev1/ai2"].to_numpy()
             height_data = data["Dev1/ai3"].to_numpy()
-            if op == 1:
-                amp_data = data["Dev1/ai4"].to_numpy()[fs:fe]
-                phase_data = data["Dev1/ai5"].to_numpy()[fs:fe] 
             # FRAME
             frame_indexes = get_signal_indexes_numpy(frame_data)
             fs = frame_indexes[1]
@@ -74,13 +71,15 @@ class ProcessingWorker(QRunnable):
                         pe = pixel_indexes[i,j+1]
                         height[i,j] = np.mean(height_data[ps:pe])
                 Z = -height
-                # Z = (height - np.max(np.abs(height))) * -1090.91 
-                # Z = height 
                 # Z = remove_linear_trend(height)
             elif op == 1:
                 # AMP & PHASE
-                amp_data = amp_data[fs:fe]
-                phase_data = phase_data[fs:fe]
+                print("PFM OPTION PROCESSING EXECUTING")
+                amp_data = data["Dev1/ai4"].to_numpy()[fs:fe]
+                phase_data = data["Dev1/ai5"].to_numpy()[fs:fe]
+                if op == 3:
+                    amp_lateral_data = data["Dev1/ai6"].to_numpy()[fs:fe]
+                    phase_lateral_data = data["Dev1/ai7"].to_numpy()[fs:fe]
                 ext = 300
                 amps = np.zeros((res,res,ext))
                 phases = np.zeros((res,res,ext))

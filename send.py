@@ -6,12 +6,11 @@ from PySide6.QtWidgets import(
     QMessageBox,
     QWidget
 )
-from PySide6.QtCore import Qt, QThreadPool, QTimer
+from PySide6.QtCore import Qt, QThreadPool
 from plot_widgets import ScatterPlotWidget
 from lockin_worker import LockinWorker
 from srsinst.sr860 import SR865
 from lockin_config_widget import LockInConfigWidget
-import pymeasure.instruments.srs.sr830 as SR830
 import pyvisa as visa
 import numpy as np
 
