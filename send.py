@@ -50,8 +50,8 @@ class SendDataTab(QWidget):
         indicators_group_box_layout.addWidget(self.curr_harmonic,5,1,1,1)
         indicators_group_box.setLayout(indicators_group_box_layout)
         ## PHASE AND AMP PLOTS
-        self.phase_plot_widget = ScatterPlotWidget(title="Amplitude vs Frequency", xlabel="Frequency", ylabel="Amplitude")
-        self.amp_plot_widget = ScatterPlotWidget(title="Phase vs Frequency", xlabel="Frequency", ylabel="Phase")
+        self.phase_plot_widget = ScatterPlotWidget(title="Amplitude vs Frequency", xlabel="Amplitude", ylabel="Frequency")
+        self.amp_plot_widget = ScatterPlotWidget(title="Phase vs Frequency", xlabel="Phase", ylabel="Frequency")
         self.phase_plot_widget.setFixedSize(300,300)
         self.amp_plot_widget.setFixedSize(300,300)
 
@@ -115,9 +115,15 @@ class SendDataTab(QWidget):
         self.threadpool.start(self.worker_lockin1)
 
     def on_new_data(self, data):
-        self.fs = np.append(self.fs,data["f"])
-        self.thetas = np.append(self.thetas, data["theta"])
-        self.rs = np.append(self.rs, data["r"])
+        f = data["f"]
+        theta = data["theta"]
+        r = data["r"]
+        self.fs = np.append(self.fs,f)
+        self.thetas = np.append(self.thetas, theta)
+        self.rs = np.append(self.rs, r)
+        self.r_value.setValue(r)
+        self.theta_value.setValue(theta)
+        self.curr_f.setValue(f)
 
     def update_plots(self):
         self.phase_plot_widget.update_plot(self.fs, self.thetas)
@@ -125,3 +131,8 @@ class SendDataTab(QWidget):
 
     def stop_sweep(self):
         self.worker_lockin1.running = False
+        max_amp = np.max(self.rs)
+        idx = np.argmax(self.rs)
+        res_f = self.fs[idx]
+        self.max_amp.setValue(max_amp)
+        self.resonance_f.setValue(res_f)
