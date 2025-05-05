@@ -13,7 +13,7 @@ from PySide6.QtWidgets import(
 )
 from PySide6.QtCore import QThreadPool
 from processing_worker import ProcessingWorker
-from plot_widgets import CmapWidget, ScatterPlotWidget, SurfacePlotDialog, SurfacePlotWindowMatplot
+from plot_widgets import CmapWidget, ScatterPlotWidget, SurfacePlotWindowMatplot
 import pyqtgraph as pg
 import numpy as np
 
@@ -58,12 +58,13 @@ class VisualizeTab(QWidget):
         self.topo_y_profile_widget = ScatterPlotWidget(title="Y Profile")
         self.pfm_phase_curve_widget = ScatterPlotWidget(title="Phase Curve")
         self.pfm_amp_curve_widget = ScatterPlotWidget(title="Amp Curve")
+        self.psd_plot_widget = pg.GraphicsLayoutWidget()
         self.topo_3D_window = None
         self.pfm_3D_amp_window = None
         self.pfm_3D_phase_window = None
         # CONFIG
         self.progress_bar.hide()
-        self.study_op.addItems(["Topography", "PFM"])
+        self.study_op.addItems(["Topography", "PFM", "PSD"])
         self.path_input.setEnabled(False)
         self.topo_2D_op.setChecked(True)
         self.topo_profile_line_op.setChecked(True)
@@ -72,6 +73,7 @@ class VisualizeTab(QWidget):
         self.pfm_phase_cmap_widget.hide()
         self.pfm_phase_curve_widget.hide()
         self.pfm_amp_curve_widget.hide()
+        self.psd_plot_widget.hide()
         for btn in self.pfm_options_btns:
             btn.hide()
 
@@ -125,6 +127,7 @@ class VisualizeTab(QWidget):
         x_layout4.addWidget(self.topo_cmap_widget)
         x_layout4.addWidget(self.pfm_amp_cmap_widget)
         x_layout4.addWidget(self.pfm_phase_cmap_widget)
+        x_layout4.addWidget(self.psd_plot_widget)
         
         x_layout5 = QHBoxLayout()
         x_layout5.addWidget(self.topo_x_profile_widget)
@@ -152,13 +155,23 @@ class VisualizeTab(QWidget):
             for btn in self.pfm_options_btns:
                 btn.hide()
                 btn.setChecked(False)
-        else:
+            self.psd_plot_widget.hide()
+        elif index == 1:
             for btn in self.pfm_options_btns:
                 btn.show()
                 btn.setChecked(True)
             for btn in self.topo_options_btns:
                 btn.setChecked(False)
                 btn.hide()
+            self.psd_plot_widget.hide()
+        elif index == 2:
+            for btn in self.pfm_options_btns:
+                btn.hide()
+                btn.setChecked(False)
+            for btn in self.topo_options_btns:
+                btn.setChecked(False)
+                btn.hide()
+            self.psd_plot_widget.show()
     
     def get_pathname(self):
         path_data = QFileDialog.getOpenFileName()
@@ -188,17 +201,19 @@ class VisualizeTab(QWidget):
         self.progress_bar.hide()
         QMessageBox.critical(self, "Processing Error", f"An error ({err}) has occurred while processing the data. Try with a new set.")
     
-    def create_plots(self, Z):
+    def create_plots(self, data):
         self.progress_bar.reset()
         self.progress_bar.hide()
         op = self.study_op.currentIndex()
         if op == 0:
+            Z = data
             if self.topo_2D_op.isChecked():
                 self.topo_cmap_widget.setup_widget(Z)
             if self.topo_3D_op.isChecked():
                 self.topo_3D_window = SurfacePlotWindowMatplot(Z)
                 self.topo_3D_window.show()
         elif op == 1:
+            Z = data
             amps = Z[0,:]
             phases = Z[1,:]
             if self.pfm_2D_amp_op.isChecked():
@@ -211,6 +226,17 @@ class VisualizeTab(QWidget):
             if self.pfm_3D_phase_op.isChecked():
                 self.pfm_3D_phase_window = SurfacePlotWindowMatplot(phases)
                 self.pfm_3D_phase_window.show()
+        elif op == 2:
+            frequencies = data["fs"]
+            psd = data["psd"]
+            noise = data["noise"]
+            x = np.arange(1,noise.size+1)
+            noise_plot = self.psd_plot_widget.addPlot(row=0,col=0,x=x,y=noise,units="V")
+            noise_plot.setLabel('top', 'Data Number')
+            noise_plot.setLabel('left', 'Voltage', units='V')
+            psd_plot = self.psd_plot_widget.addPlot(row=1,col=0,x=frequencies,y=psd,units="Hz")
+            psd_plot.setLabel('bottom', 'Frequency', units='Hz')
+            psd_plot.setLabel('left', 'Amplitude', units='V')
         self.study_op.setEnabled(True)
         self.choose_path_btn.setEnabled(True)
         

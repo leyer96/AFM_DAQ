@@ -1,5 +1,5 @@
 from PySide6.QtCore import QRunnable, Slot, QObject, Signal
-from plot_utils import get_signal_indexes_numpy, load_data, remove_linear_trend
+from plot_utils import get_signal_indexes_numpy, load_data, remove_linear_trend, get_psd
 import numpy as np
 
 class WorkerSignals(QObject):
@@ -8,48 +8,44 @@ class WorkerSignals(QObject):
     progress = Signal(int)
 
 class ProcessingWorker(QRunnable):
-    def __init__(self, path, op, rows_to_skip=3):
+    def __init__(self, path, op):
         super().__init__()
         self.path = path
         self.op = op
-        self.rows_to_skip = rows_to_skip
         self.signals = WorkerSignals()
 
     @Slot()
     def run(self):
         path = self.path
         op = self.op
-        rows_to_skip = self.rows_to_skip
         try:
-            if path.endswith(".csv"):
-                try:
-                    self.signals.progress.emit(10)
-                    data = load_data(path,rows_to_skip)
-                except:
-                    self.signals.error.emit("ERROR PRESENTED WHILE LOADING DATASET")
-                else:
-                    self.signals.progress.emit(50)
-                frame_data = data["Dev1/ai0"].to_numpy()
-                line_data = data["Dev1/ai1"].to_numpy()
-                pixel_data = data["Dev1/ai2"].to_numpy()
-                height_data = data["Dev1/ai3"].to_numpy()
-                if op == 1:
-                    amp_data = data["Dev1/ai4"].to_numpy()[fs:fe]
-                    phase_data = data["Dev1/ai5"].to_numpy()[fs:fe] 
-                elif op == 2:
-                    amp_lateral_data = data["Dev1/ai6"].to_numpy()[fs:fe]
-                    phase_lateral_data = data["Dev1/ai7"].to_numpy()[fs:fe]
-            elif path.endswith(".npy"):
-                self.signals.progress.emit(25)
-                data = np.load(path)
-                frame_data = data[:,0]
-                line_data = data[:,1]
-                pixel_data = data[:,2]
-                height_data = data[:,3]
-                if op == 1:
-                    amp_data = data[:,4]
-                    phase_data = data[:,5]
-
+            self.signals.progress.emit(10)
+            try:
+                for i in range(5):
+                    if i > 0:
+                        data = load_data(path, rows_to_skip=i)
+                    else:
+                        data = load_data(path)
+                    if data is not None:
+                        break
+            except Exception as e:
+                print(e)
+                self.signals.error.emit("ERROR PRESENTED WHILE LOADING DATASET")
+            else:
+                self.signals.progress.emit(50)
+            if op == 2:
+                noise = data["Dev1/ai0"].to_numpy()
+                psd_data = get_psd(noise)
+                self.signals.data.emit(psd_data)
+                self.signals.progress.emit(100)
+                return 
+            frame_data = data["Dev1/ai0"].to_numpy()
+            line_data = data["Dev1/ai1"].to_numpy()
+            pixel_data = data["Dev1/ai2"].to_numpy()
+            height_data = data["Dev1/ai3"].to_numpy()
+            if op == 1:
+                amp_data = data["Dev1/ai4"].to_numpy()[fs:fe]
+                phase_data = data["Dev1/ai5"].to_numpy()[fs:fe] 
             # FRAME
             frame_indexes = get_signal_indexes_numpy(frame_data)
             fs = frame_indexes[1]
@@ -77,11 +73,11 @@ class ProcessingWorker(QRunnable):
                         ps = pixel_indexes[i,j]
                         pe = pixel_indexes[i,j+1]
                         height[i,j] = np.mean(height_data[ps:pe])
-                Z = height
+                Z = -height
                 # Z = (height - np.max(np.abs(height))) * -1090.91 
                 # Z = height 
                 # Z = remove_linear_trend(height)
-            elif op == 1 or op == 2:
+            elif op == 1:
                 # AMP & PHASE
                 amp_data = amp_data[fs:fe]
                 phase_data = phase_data[fs:fe]
@@ -106,6 +102,7 @@ class ProcessingWorker(QRunnable):
                 Z = np.stack((amps, phases))
             self.signals.data.emit(Z)
             self.signals.progress.emit(100)
-        except:
-            self.signals.error.emit("ERROR WHILE PROCESSING")
+        except Exception as e:
+            print(e)
+            self.signals.error.emit(f"ERROR WHILE PROCESSING: {e}")
     

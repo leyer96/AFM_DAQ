@@ -11,7 +11,7 @@ from matplotlib.figure import Figure
 class ScatterPlotWidget(pg.PlotWidget):
     def __init__(self,title="",xlabel="",ylabel=""):
         super().__init__()
-        self.setFixedSize(300,300)
+        self.setFixedSize(250,250)
         self.plot_item = self.plot()  
         self.plot_item.setData([], [])
         self.setTitle(title)
@@ -31,7 +31,7 @@ class CmapWidget(pg.ImageView):
     v_values = Signal(list)
     def __init__(self):
         super().__init__()
-        self.setFixedSize(300,300)
+        self.setFixedSize(250,250)
         self.image_item = pg.ImageItem()
         self.h_line = pg.InfiniteLine(movable=True,angle=0)
         self.v_line = pg.InfiniteLine(movable=True,angle=90)
@@ -83,7 +83,7 @@ class SurfacePlotDialog(QDialog):
     def __init__(self,Z,parent=None):
         super().__init__(parent)
         self.setWindowTitle("3D Surface Plot")
-        self.resize(300, 300)
+        self.resize(500, 500)
         
         self.gl_widget = gl.GLViewWidget()
 
@@ -105,7 +105,7 @@ class SurfacePlotDialog(QDialog):
 class SurfacePlotWindowMatplot(QWidget):
     def __init__(self, Z,title=""):
         super().__init__()
-        self.setFixedSize(300,300)
+        self.setMinimumSize(500,500)
         fig = Figure(figsize=(5,3))
         fig_canvas = FigureCanvas(fig)
         fig_canvas.setParent(self)
