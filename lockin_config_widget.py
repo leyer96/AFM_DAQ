@@ -37,9 +37,12 @@ class LockInConfigWidget(QWidget):
 
         # CONFIG
         self.address_input.addItem("-- Select --")
-        self.f0_input.setRange(0,1e6)
-        self.ff_input.setRange(0,1e6)
-        self.f_step_input.setRange(0,1e6)
+        self.f0_input.setRange(0,1E9)
+        self.f0_input.setGroupSeparatorShown(True)
+        self.ff_input.setRange(0,1E9)
+        self.ff_input.setGroupSeparatorShown(True)
+        self.f_step_input.setRange(0,1E9)
+        self.f_step_input.setGroupSeparatorShown(True)
         self.output_amp_input.setRange(0,2)
         self.f0_input.setValue(1e3)
         self.ff_input.setValue(2e3)

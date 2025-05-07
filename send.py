@@ -21,7 +21,6 @@ class SendDataTab(QWidget):
         # WIDGETS
         ## LOCK-IN 1 GROUP BOX
         self.lock_in1_config_widget = LockInConfigWidget(n="1")
-        # self.lock_in2_config_widget = LockInConfigWidget(n="2")
         
         ## Indicators Group Box
         indicators_group_box = QGroupBox("Indicators")
@@ -71,6 +70,8 @@ class SendDataTab(QWidget):
         self.curr_v.setRange(-1E4,1E4)
         self.max_amp.setRange(-1E4,1E4)
         self.curr_harmonic.setRange(0,1E4)
+        self.curr_f.setGroupSeparatorShown(True)
+        self.resonance_f.setGroupSeparatorShown(True)
 
         # SIGNALS
         self.lock_in1_config_widget.run_btn.clicked.connect(self.start_sweep)
