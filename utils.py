@@ -35,3 +35,18 @@ class Paths:
     # @classmethod
     # def test(cls, filename):
     #     return os.path.join(cls.tests, filename)
+
+CHANNELS_NAMES = [
+    "Dev1/ai0",
+    "Dev1/ai1",
+    "Dev1/ai2",
+    "Dev1/ai3",
+    "Dev1/ai4",
+    "Dev1/ai5",
+    "Dev1/ai6",
+    "Dev1/ai7",
+]
+
+STYLES = {
+    "btn": "height: 30px;"
+}

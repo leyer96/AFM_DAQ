@@ -15,11 +15,10 @@ from PySide6.QtWidgets import(
     QWidget
 )
 from PySide6.QtCore import QTimer, QThreadPool
-from PySide6.QtGui import QIcon, QPen
+from PySide6.QtGui import QIcon
 from acquisition_thread import AcquisitionThread
 from recording_worker import RecordingWorker
-# from widgets import ConnectionStatusIndicator
-from utils import Paths
+from utils import Paths, CHANNELS_NAMES, STYLES
 import pyqtgraph as pg
 import numpy as np
 from datetime import datetime
@@ -33,12 +32,12 @@ class AcquireTab(QWidget):
         ## PLOT WIDGET
         self.plot_widget = pg.PlotWidget()
         self.stream_data_option = QCheckBox("Stream data")
-        ## ACQUISITION CONFIG
-        acquisition_config_group_box = QGroupBox("Acquisition Configuration")
-        self.n_channels_input = QSpinBox() 
+        ## PLOT CONFIG
+        acquisition_config_group_box = QGroupBox("Plot Configuration")
         self.channel_selection_input = QComboBox()
         ## DAQ CONFIG
         daq_config_group_box = QGroupBox("DAQ Configuration")
+        self.n_channels_input = QSpinBox() 
         self.min_input_value_input = QDoubleSpinBox()
         self.max_input_value_input = QDoubleSpinBox()
         self.sample_rate_input = QDoubleSpinBox()
@@ -50,11 +49,9 @@ class AcquireTab(QWidget):
         # ---- DATA ---- #
         self.channels_data = np.array([])
         self.plot_data = np.zeros(50000)
-        # self.plots_refs = [self.plot_widget.plot(np.array([]), pen=QPen("yellow"))] # CREAR PEN ANTES
         self.plots_refs = [self.plot_widget.plot(np.array([]), pen="yellow")] # CREAR PEN ANTES
 
         # ---- CONFIG ---- #
-        self.DAQ_connected = False
         self.is_recording = False
         self.is_streaming = False
         ## THREADS & TIMER
@@ -64,23 +61,28 @@ class AcquireTab(QWidget):
         ## INPUTS
         self.n_channels_input.setRange(1,8)
         self.n_channels_input.setValue(1)
-        self.channel_selection_input.addItems(["All","Dev1/ai0", "Dev1/ai1", "Dev1/ai2", "Dev1/ai3", "Dev1/ai4", "Dev1/ai5"])
+        self.channel_selection_input.addItem("All")
         self.sample_rate_input.setRange(0,1.5E6)
-        self.sample_rate_input.setValue(40000)
+        self.sample_rate_input.setValue(40_000)
+        self.sample_rate_input.setGroupSeparatorShown(True)
         self.min_input_value_input.setRange(-10,10)
         self.min_input_value_input.setValue(-10)
         self.max_input_value_input.setRange(-10,10)
         self.max_input_value_input.setValue(10)
         self.n_samples_input.setRange(0,1.5E6)
-        self.n_samples_input.setValue(40000)
+        self.n_samples_input.setValue(40_000)
+        self.n_samples_input.setGroupSeparatorShown(True)
         ## ICONS
         self.record_btn.setIcon(QIcon(Paths.icon("control-record.png")))
         stop_btn.setIcon(QIcon(Paths.icon("control-stop-square.png")))
-
+        ## STYLE
+        self.record_btn.setStyleSheet(STYLES["btn"])
+        stop_btn.setStyleSheet(STYLES["btn"])
         # ---- SIGNALS ---- #
         self.stream_data_option.toggled.connect(self.toggle_stream)
         self.n_channels_input.valueChanged.connect(self.set_n_of_channels)
         self.min_input_value_input.valueChanged.connect(self.set_max_input)
+        self.channel_selection_input.currentIndexChanged.connect(self.change_plots_visibility)
         self.record_btn.clicked.connect(self.start_recording)
         self.sample_rate_input.valueChanged.connect(lambda sample_rate: self.n_samples_input.setRange(0, sample_rate))
         self.sample_rate_input.valueChanged.connect(self.set_plot_xrange)
@@ -89,10 +91,10 @@ class AcquireTab(QWidget):
         # ---- LAYOUT ---- #
         ## FORM - DAQ CONFIG
         f1 = QFormLayout()
-        f1.addRow("# of channels to acquire", self.n_channels_input)
         f1.addRow("Plot channel", self.channel_selection_input)
         acquisition_config_group_box.setLayout(f1)
         f2 = QFormLayout()
+        f2.addRow("# of channels to acquire", self.n_channels_input)
         f2.addRow("Min. Value (V)", self.min_input_value_input)
         f2.addRow("Max. Value (V)", self.max_input_value_input)
         f2.addRow("DAQ Sample Rate (samples/s)", self.sample_rate_input)
@@ -119,8 +121,10 @@ class AcquireTab(QWidget):
         else:
             self.plot_data = np.zeros((n,50000))
         pens = ["yellow","green","blue","red","white","pink","orange","gray"]
-        # pens = [QPen("yellow"),QPen("green"),QPen("blue"),QPen("red"), QPen("white"), QPen("pink"), QPen("orange"), QPen("gray")] # CAMBIAR A PEN
         self.plots_refs = [self.plot_widget.plot(np.array([]), pen=pens[i]) for i in range(n)]
+        self.channel_selection_input.clear()
+        self.channel_selection_input.addItem("All")
+        self.channel_selection_input.addItems(CHANNELS_NAMES[0:n])
 
     def set_plot_xrange(self, lim):
         n = self.n_channels_input.value()
@@ -182,7 +186,6 @@ class AcquireTab(QWidget):
 
     def on_new_data(self, new_data):
         new_data = np.array(new_data)
-        print(f"NEW DATA SHAPE: {new_data.shape}")
         try:
             n = new_data.shape[1]
             if new_data.shape[0] > 1:
@@ -199,6 +202,19 @@ class AcquireTab(QWidget):
             if self.is_recording:
                 recording_worker = RecordingWorker(filepath=self.record_file_path,csv_columns=self.csv_columns,new_data=new_data)
                 self.threadpool.start(recording_worker)
+
+    def change_plots_visibility(self, index):
+        if index == 0:
+            for plot_ref in self.plots_refs:
+                plot_ref.setVisible(True)
+        else:
+            index -= 1
+            for idx,plot_ref in enumerate(self.plots_refs):
+                if idx != index:
+                    plot_ref.setVisible(False)
+                else:
+                    plot_ref.setVisible(True)
+
 
 class FileNameDialog(QDialog):
     def __init__(self, dirname):
