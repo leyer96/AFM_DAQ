@@ -6,7 +6,7 @@ from PySide6.QtWidgets import(
     QMessageBox,
     QWidget
 )
-from PySide6.QtCore import Qt, QThreadPool
+from PySide6.QtCore import Qt, QThreadPool, QTimer
 from plot_widgets import ScatterPlotWidget
 from lockin_worker import LockinWorker
 from srsinst.sr860 import SR865
@@ -64,6 +64,13 @@ class SendDataTab(QWidget):
         self.curr_v.setReadOnly(True)
         self.max_amp.setReadOnly(True)
         self.curr_harmonic.setReadOnly(True)
+        self.r_value.setRange(-1E4,1E4)
+        self.theta_value.setRange(-1E4,1E4)
+        self.curr_f.setRange(-1E10,1E10)
+        self.resonance_f.setRange(-1E10,1E10)
+        self.curr_v.setRange(-1E4,1E4)
+        self.max_amp.setRange(-1E4,1E4)
+        self.curr_harmonic.setRange(0,1E4)
 
         # SIGNALS
         self.lock_in1_config_widget.run_btn.clicked.connect(self.start_sweep)
@@ -90,6 +97,10 @@ class SendDataTab(QWidget):
         # THREADPOOL
         self.threadpool = QThreadPool()
 
+        # TIMER
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_plots)
+
         self.get_visa_resources()
 
     def get_visa_resources(self):
@@ -112,6 +123,7 @@ class SendDataTab(QWidget):
         self.worker_lockin1.signals.finished.connect(self.update_plots)
         self.worker_lockin1.signals.failed_connection.connect(lambda: QMessageBox.warning(self, "Connection Error", "No lock-in connection established."))
         self.threadpool.start(self.worker_lockin1)
+        self.timer.start(500)
 
     def on_new_data(self, data):
         f = data["f"]
@@ -135,3 +147,4 @@ class SendDataTab(QWidget):
         res_f = self.fs[idx]
         self.max_amp.setValue(max_amp)
         self.resonance_f.setValue(res_f)
+        self.timer.stop()

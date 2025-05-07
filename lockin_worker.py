@@ -39,6 +39,7 @@ class LockinWorker(QRunnable):
                     self.signals.data.emit(data)
                 else:
                     break
+            self.lockin.ref.sine_out_amplitude = 0
             self.signals.finished.emit()
         else:
             self.signals.failed_connection.emit()
