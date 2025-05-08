@@ -10,10 +10,14 @@ class AcquisitionThread(QThread):
         self.task = Task()
         for i in range(n_channels):
             # self.task.ai_channels.add_ai_voltage_chan(AI_CHANNELS[i], min_val=min_v, max_val=max_v, terminal_config=TerminalConfiguration.RSE)
-            self.task.ai_channels.add_ai_voltage_chan(AI_CHANNELS[i], min_val=min_v, max_val=max_v)
+            self.task.ai_channels.add_ai_voltage_chan(
+                AI_CHANNELS[i],
+                samps_per_chan=self.n_samples, 
+                min_val=min_v, 
+                max_val=max_v, 
+                terminal_config=TerminalConfiguration.DIFF)
         self.task.timing.cfg_samp_clk_timing(sample_rate, sample_mode=AcquisitionType.CONTINUOUS)
         self.is_running = True
-        self.data_arr = np.array([] for _ in range(n_channels))
         self.n_samples = n_samples
         self.n_channels = n_channels
     
@@ -23,12 +27,12 @@ class AcquisitionThread(QThread):
             while True:
                 if self.is_running:
                     data = self.task.read(number_of_samples_per_channel=self.n_samples)
-                    self.data.emit(data)
-                else:
-                    self.task.close()
-                    return
+                    self.data.emit(np.array(data))
         except KeyboardInterrupt:
             print("ACQUISITION ABORTED")
+        finally:
+            self.task.stop()
+            self.task.close()
 
     def stop(self):
         self.is_running = False

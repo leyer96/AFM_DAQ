@@ -40,7 +40,7 @@ class AcquireTab(QWidget):
         self.n_channels_input = QSpinBox() 
         self.min_input_value_input = QDoubleSpinBox()
         self.max_input_value_input = QDoubleSpinBox()
-        self.sample_rate_input = QDoubleSpinBox()
+        self.sample_rate_input = QSpinBox()
         self.n_samples_input = QSpinBox()
         ## RECORDING CONTROLS
         self.record_btn = QPushButton("RECORD")
@@ -84,8 +84,7 @@ class AcquireTab(QWidget):
         self.min_input_value_input.valueChanged.connect(self.set_max_input)
         self.channel_selection_input.currentIndexChanged.connect(self.change_plots_visibility)
         self.record_btn.clicked.connect(self.start_recording)
-        self.sample_rate_input.valueChanged.connect(lambda sample_rate: self.n_samples_input.setRange(0, sample_rate))
-        self.sample_rate_input.valueChanged.connect(self.set_plot_xrange)
+        self.sample_rate_input.valueChanged.connect(self.handle_sample_rate_input_change)
         stop_btn.clicked.connect(self.stop_recording)
 
         # ---- LAYOUT ---- #
@@ -116,19 +115,27 @@ class AcquireTab(QWidget):
     def set_n_of_channels(self,n):
         arr = [[] for _ in range(n)]
         self.channels_data = np.array(arr)
+        samp_r = self.sample_rate_input.value()
         if n == 1:
-            self.plot_data = np.zeros(50000)
+            self.plot_data = np.zeros(samp_r)
         else:
-            self.plot_data = np.zeros((n,50000))
+            self.plot_data = np.zeros((n,samp_r))
         pens = ["yellow","green","blue","red","white","pink","orange","gray"]
+        for plot_ref in self.plots_refs:
+            self.plot_widget.removeItem(plot_ref)
         self.plots_refs = [self.plot_widget.plot(np.array([]), pen=pens[i]) for i in range(n)]
         self.channel_selection_input.clear()
         self.channel_selection_input.addItem("All")
         self.channel_selection_input.addItems(CHANNELS_NAMES[0:n])
 
-    def set_plot_xrange(self, lim):
+    def handle_sample_rate_input_change(self, samp_r):
         n = self.n_channels_input.value()
-        self.plot_data = np.zeros((n,int(lim*1.1)))
+        self.n_samples_input.setRange(0,samp_r)
+        self.n_samples_input.setValue(samp_r)
+        if n == 1:
+            self.plot_data = np.zeros(samp_r)
+        else:
+            self.plot_data = np.zeros((n,samp_r))
 
     def set_max_input(self,min_v):
         self.max_input_value_input.setMinimum(min_v)
@@ -151,12 +158,20 @@ class AcquireTab(QWidget):
         self.acquisition_thread.start()
         self.is_streaming = True
         self.n_channels_input.setEnabled(False)
+        self.sample_rate_input.setEnabled(False)
+        self.n_samples_input.setEnabled(False)
+        self.min_input_value_input.setEnabled(False)
+        self.max_input_value_input.setEnabled(False)
 
     def stop_acquisition(self):
         if self.is_streaming:
             self.acquisition_thread.stop()
             self.is_streaming = False
             self.n_channels_input.setEnabled(True)
+            self.sample_rate_input.setEnabled(True)
+            self.n_samples_input.setEnabled(True)
+            self.min_input_value_input.setEnabled(True)
+            self.max_input_value_input.setEnabled(True)
 
     def start_recording(self):
         self.is_recording = True
@@ -185,23 +200,18 @@ class AcquireTab(QWidget):
                     self.plots_refs[i].setData(self.plot_data[i,:])
 
     def on_new_data(self, new_data):
-        new_data = np.array(new_data)
-        try:
+        if new_data.ndim == 2:
             n = new_data.shape[1]
             if new_data.shape[0] > 1:
                 self.plot_data = np.roll(self.plot_data,-n,axis=1)
                 self.plot_data[:,-n:] = new_data
-                if self.is_recording:
-                    if self.is_recording and self.record_file_path:
-                        recording_worker = RecordingWorker(filepath=self.record_file_path,csv_columns=self.csv_columns,new_data=new_data)
-                        self.threadpool.start(recording_worker)
-        except:
+        else:
             n = new_data.shape[0]
             self.plot_data = np.roll(self.plot_data,-n)
             self.plot_data[-n:] = new_data
-            if self.is_recording:
-                recording_worker = RecordingWorker(filepath=self.record_file_path,csv_columns=self.csv_columns,new_data=new_data)
-                self.threadpool.start(recording_worker)
+        if self.is_recording:
+            recording_worker = RecordingWorker(filepath=self.record_file_path,csv_columns=self.csv_columns,new_data=new_data)
+            self.threadpool.start(recording_worker)
 
     def change_plots_visibility(self, index):
         if index == 0:
@@ -242,4 +252,3 @@ class FileNameDialog(QDialog):
             destination = self.dirname + "/" + filename + ".csv"
             shutil.move(src,destination)
             self.close()
-

@@ -174,7 +174,7 @@ class VisualizeTab(QWidget):
             self.psd_plot_widget.show()
     
     def get_pathname(self):
-        path_data = QFileDialog.getOpenFileName()
+        path_data = QFileDialog.getOpenFileName(caption=f"SELECT {self.study_op.currentText()} DATAFILE")
         path = path_data[0]
         if path:
             self.path_input.setText(path)
@@ -241,6 +241,3 @@ class VisualizeTab(QWidget):
             psd_plot.setLabel('left', 'Amplitude', units='V')
         self.study_op.setEnabled(True)
         self.choose_path_btn.setEnabled(True)
-        
-            
-
