@@ -15,6 +15,16 @@ def load_data(path,rows_to_skip=None):
     else:
         print("SUCCESFUL LOADING")
         return data
+    
+def attempt_data_load(path):
+    for i in range(5):
+        if i > 0:
+            data = load_data(path, rows_to_skip=i)
+        else:
+            data = load_data(path)
+        if data is not None:
+            break
+    return data
 
 def get_signal_indexes_numpy(data):
     indexes = np.nonzero(np.absolute(np.diff(data)) > 1)[0]

@@ -10,6 +10,7 @@ from PySide6.QtCore import Qt, QThreadPool, QTimer
 from plot_widgets import ScatterPlotWidget
 from lockin_worker import LockinWorker
 from srsinst.sr860 import SR865
+from pymeasure.instruments.srs import SR830
 from lockin_config_widget import LockInConfigWidget
 import pyvisa as visa
 import numpy as np
@@ -48,8 +49,8 @@ class SendDataTab(QWidget):
         indicators_group_box_layout.addWidget(self.curr_harmonic,5,1,1,1)
         indicators_group_box.setLayout(indicators_group_box_layout)
         ## PHASE AND AMP PLOTS
-        self.phase_plot_widget = ScatterPlotWidget(title="Amplitude vs Frequency", xlabel="Amplitude", ylabel="Frequency")
-        self.amp_plot_widget = ScatterPlotWidget(title="Phase vs Frequency", xlabel="Phase", ylabel="Frequency")
+        self.phase_plot_widget = ScatterPlotWidget(title="Amplitude vs Frequency", xlabel="Frequency", ylabel="Amplitude",xunits="Hz",yunits="V")
+        self.amp_plot_widget = ScatterPlotWidget(title="Phase vs Frequency", xlabel="Frequency", ylabel="Phase",xunits="Hz",yunits="Deg.")
         self.phase_plot_widget.setFixedSize(300,300)
         self.amp_plot_widget.setFixedSize(300,300)
 
@@ -109,7 +110,10 @@ class SendDataTab(QWidget):
         self.lock_in1_config_widget.address_input.addItems(resources)
 
     def connect_to_lockin(self, address):
-        self.lockin1 = SR865("visa", address)
+        if address.startswith("GPIB"):
+            self.lockin = SR830(address)
+        else:
+            self.lockin = SR865("visa", address)
 
     def start_sweep(self):
         l1_amp = self.lock_in1_config_widget.output_amp_input.value()
@@ -119,11 +123,11 @@ class SendDataTab(QWidget):
         self.fs = np.array([])
         self.rs = np.array([])
         self.thetas = np.array([])
-        self.worker_lockin1 = LockinWorker(lockin=self.lockin1,sine_output=l1_amp,f0=l1_f0,ff=l1_ff,f_step=l1_f_step)
-        self.worker_lockin1.signals.data.connect(self.on_new_data)
-        self.worker_lockin1.signals.finished.connect(self.update_plots)
-        self.worker_lockin1.signals.failed_connection.connect(lambda: QMessageBox.warning(self, "Connection Error", "No lock-in connection established."))
-        self.threadpool.start(self.worker_lockin1)
+        self.worker_lockin = LockinWorker(lockin=self.lockin,sine_output=l1_amp,f0=l1_f0,ff=l1_ff,f_step=l1_f_step)
+        self.worker_lockin.signals.data.connect(self.on_new_data)
+        self.worker_lockin.signals.finished.connect(self.update_plots)
+        self.worker_lockin.signals.failed_connection.connect(lambda: QMessageBox.warning(self, "Connection Error", "No lock-in connection established."))
+        self.threadpool.start(self.worker_lockin)
         self.timer.start(500)
 
     def on_new_data(self, data):
@@ -142,7 +146,7 @@ class SendDataTab(QWidget):
         self.amp_plot_widget.update_plot(self.fs, self.rs)
 
     def stop_sweep(self):
-        self.worker_lockin1.running = False
+        self.worker_lockin.running = False
         max_amp = np.max(self.rs)
         idx = np.argmax(self.rs)
         res_f = self.fs[idx]

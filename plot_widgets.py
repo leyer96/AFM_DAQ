@@ -9,14 +9,14 @@ from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as Navigation
 from matplotlib.figure import Figure
 
 class ScatterPlotWidget(pg.PlotWidget):
-    def __init__(self,title="",xlabel="",ylabel=""):
+    def __init__(self,title="",xlabel="",ylabel="",xunits=None,yunits=None):
         super().__init__()
         self.setFixedSize(250,250)
         self.plot_item = self.plot()  
         self.plot_item.setData([], [])
         self.setTitle(title)
-        self.setLabel("left", xlabel)
-        self.setLabel("bottom", ylabel)
+        self.setLabel("left", ylabel,units=yunits)
+        self.setLabel("bottom", xlabel,units=xunits)
 
     def update_plot(self,x,y):
         self.plot_item.clear()
