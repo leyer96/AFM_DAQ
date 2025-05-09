@@ -65,6 +65,28 @@ def get_psd(data):
         return data
     except:
         return None
+    
+def calculate_PFM_grid_values(amp_data,phase_data,pixel_indexes,res):
+    ext = 300
+    amps = np.zeros((res,res,ext))
+    phases = np.zeros((res,res,ext))
+    for i in range(res):
+        for j in range(res):
+            ps = pixel_indexes[i,j]
+            pe = pixel_indexes[i,j+1]
+            index_max = int(ps + ext//2 + np.argmax(amp_data[ps+ext//2:pe-ext//2]))
+            x1 = int(index_max - ext//2)             
+            x2 = int(index_max + ext//2)
+            if x1 > ps and x2 < pe:
+                amps[i,j,:] = amp_data[x1:x2]
+                phases[i,j,:] = phase_data[x1:x2]
+            else:
+                amps[i,j,:] = 0
+                phases[i,j,:] = 0
+            amps[i,j,0] = np.max(amp_data[ps:pe])
+            phases[i,j,0] = phase_data[index_max]
+    stack = np.stack((amps, phases))
+    return stack
 
 def remove_linear_trend(Z):
     rows,cols = Z.shape

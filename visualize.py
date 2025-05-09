@@ -181,7 +181,7 @@ class VisualizeTab(QWidget):
             self.prepare_for_plotting(path)
 
     def prepare_for_plotting(self,path):
-        op = self.study_op.currentIndex()
+        op = self.study_op.currentText()
         self.study_op.setEnabled(False)
         self.choose_path_btn.setEnabled(False)
         self.progress_bar.show()
