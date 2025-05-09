@@ -1,5 +1,5 @@
 from PySide6.QtCore import QRunnable, Slot, QObject, Signal
-from plot_utils import get_signal_indexes_numpy, load_data, attempt_data_load, remove_linear_trend, get_psd, calculate_PFM_grid_values
+from plot_utils import get_signal_indexes_numpy, attempt_data_load, remove_linear_trend, get_psd, calculate_PFM_grid_values
 import numpy as np
 
 class WorkerSignals(QObject):
