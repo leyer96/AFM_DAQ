@@ -23,6 +23,7 @@ import pyqtgraph as pg
 import numpy as np
 from datetime import datetime
 import shutil
+import queue
 
 
 class AcquireTab(QWidget):
@@ -50,6 +51,7 @@ class AcquireTab(QWidget):
         self.channels_data = np.array([])
         self.plot_data = np.zeros(50000)
         self.plots_refs = [self.plot_widget.plot(np.array([]), pen="yellow")] # CREAR PEN ANTES
+        self.buffer = queue.Queue()
 
         # ---- CONFIG ---- #
         self.is_recording = False
@@ -174,13 +176,17 @@ class AcquireTab(QWidget):
             self.max_input_value_input.setEnabled(True)
 
     def start_recording(self):
-        self.is_recording = True
         self.record_btn.setEnabled(False)
         self.csv_columns = ["Dev1/ai"+str(i) for i in range(len(self.plots_refs))]
         self.record_file_path = None
         self.record_file_path = './recording.csv'
-        with open(self.record_file_path, 'w') as f:
-            f.write(','.join(self.csv_columns) + '\n')
+        try:
+            with open(self.record_file_path, 'w') as f:
+                f.write(','.join(self.csv_columns) + '\n')
+        except Exception as e:
+            print(e)
+        else:
+            self.is_recording = True
 
     def stop_recording(self):
         self.is_recording = False
@@ -210,8 +216,17 @@ class AcquireTab(QWidget):
             self.plot_data = np.roll(self.plot_data,-n)
             self.plot_data[-n:] = new_data
         if self.is_recording:
-            recording_worker = RecordingWorker(filepath=self.record_file_path,csv_columns=self.csv_columns,new_data=new_data)
-            self.threadpool.start(recording_worker)
+            active_threads = self.threadpool.activeThreadCount()
+            if not self.buffer.empty():
+                buffered_data = self.buffer.get()
+                recording_worker = RecordingWorker(filepath=self.record_file_path,csv_columns=self.csv_columns,new_data=buffered_data)
+                self.threadpool.start(recording_worker)
+            else:
+                if active_threads == 1:
+                    self.buffer.put(new_data)
+                else:
+                    recording_worker = RecordingWorker(filepath=self.record_file_path,csv_columns=self.csv_columns,new_data=new_data)
+                    self.threadpool.start(recording_worker)
 
     def change_plots_visibility(self, index):
         if index == 0:
