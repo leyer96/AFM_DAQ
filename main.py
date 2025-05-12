@@ -29,7 +29,7 @@ class DAQInterface:
         tab_widget.addTab(self.acquire_window, "Acquire Data")
         tab_widget.addTab(self.send_data_window, "Send Data")
         tab_widget.addTab(self.visualize_window, "Visualize")
-        tab_widget.addTab(self.multi_freq_window, "MULTI-FREQ")
+        # tab_widget.addTab(self.multi_freq_window, "MULTI-FREQ")
         
         self.main_window.setCentralWidget(tab_widget)
 

@@ -3,6 +3,7 @@ from PySide6.QtWidgets import(
     QComboBox,
     QFileDialog,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QMessageBox,
@@ -215,10 +216,7 @@ class VisualizeTab(QWidget):
                         continue
                     btn.hide()
                     btn.setChecked(False)
-        if index == 3:
-            self.psd_plot_widget.show()
-        else:
-            self.psd_plot_widget.hide()
+        self.psd_plot_widget.show() if index == 3 else self.psd_plot_widget.hide()
     
     def get_pathname(self):
         path_data = QFileDialog.getOpenFileName(caption=f"SELECT {self.study_op.currentText()} DATAFILE")
@@ -253,11 +251,29 @@ class VisualizeTab(QWidget):
         self.progress_bar.hide()
         op = self.study_op.currentText()
         if op == "Topography":
-            Z = data
+            sensitivity_rate, ok = QInputDialog.getDouble(
+                self,
+                "Sensitivity rate",
+                "Sensitivity rate (V/nm):",
+                value=0,
+                minValue=0,
+                maxValue=2000,
+                decimals=2,
+                )
+            if ok and sensitivity_rate:
+                Z = data * sensitivity_rate
+                zlabel_3d = "Height (nm)"
+                self.topo_x_profile_widget.set_ylabel("Height (nm)")
+                self.topo_y_profile_widget.set_ylabel("Height (nm)")
+            else:
+                Z = data
+                zlabel_3d = "Height (V)"
+                self.topo_x_profile_widget.set_ylabel("Height (V)")
+                self.topo_y_profile_widget.set_ylabel("Height (V)")
             if self.topo_2D_op.isChecked():
                 self.topo_cmap_widget.setup_widget(Z)
             if self.topo_3D_op.isChecked():
-                self.topo_3D_window = SurfacePlotWindowMatplot(Z)
+                self.topo_3D_window = SurfacePlotWindowMatplot(Z,xlabel="Pixel",ylabel="Pixel",zlabel=zlabel_3d)
                 self.topo_3D_window.show()
         elif op == "PFM":
             Z = data

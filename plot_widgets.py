@@ -25,6 +25,12 @@ class ScatterPlotWidget(pg.PlotWidget):
     def add_extra_plot(self):
         p2 =  self.plot()
         return p2
+    
+    def set_xlabel(self,xlabel):
+        self.setLabel("bottom", xlabel)
+
+    def set_ylabel(self,ylabel):
+        self.setLabel("left", ylabel)
 
 class CmapWidget(pg.ImageView):
     h_values = Signal(list)
@@ -103,7 +109,7 @@ class SurfacePlotDialog(QDialog):
         self.gl_widget.addItem(surface)
 
 class SurfacePlotWindowMatplot(QWidget):
-    def __init__(self, Z,title=""):
+    def __init__(self, Z,title="",xlabel="",ylabel="",zlabel=""):
         super().__init__()
         self.setMinimumSize(500,500)
         fig = Figure(figsize=(5,3))
@@ -111,9 +117,9 @@ class SurfacePlotWindowMatplot(QWidget):
         fig_canvas.setParent(self)
         ax = fig_canvas.figure.add_subplot(111,projection="3d")
         ax.set_title(title)
-        ax.set_xlabel("Pixel")
-        ax.set_ylabel("Pixel")
-        ax.set_zlabel("Height (V)")
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_zlabel(zlabel)
         X = np.arange(Z.shape[0])
         Y = np.arange(Z.shape[1])
         X, Y = np.meshgrid(X, Y)

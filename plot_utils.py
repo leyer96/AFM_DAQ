@@ -79,7 +79,7 @@ def calculate_PFM_grid_values(amp_data,phase_data,pixel_indexes,res):
             x2 = int(index_max + ext//2)
             if x1 > ps and x2 < pe:
                 amps[i,j,:] = amp_data[x1:x2]
-                phases[i,j,:] = phase_data[x1:x2]
+                phases[i,j,:] = phase_data[x1:x2] * 18 # CONVERSION FROM V TO DEG.
             else:
                 amps[i,j,:] = 0
                 phases[i,j,:] = 0
