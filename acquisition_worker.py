@@ -1,6 +1,6 @@
 from PySide6.QtCore import QRunnable, Signal, Slot, QObject
-from nidaqmx import Task
-from nidaqmx.constants import TerminalConfiguration, AcquisitionType, LoggingMode, LoggingOperation
+# from nidaqmx import Task
+# from nidaqmx.constants import TerminalConfiguration, AcquisitionType, LoggingMode, LoggingOperation
 import numpy as np
 import time 
 AI_CHANNELS = ['Dev1/ai0', 'Dev1/ai1', 'Dev1/ai2', 'Dev1/ai3', 'Dev1/ai4', 'Dev1/ai5', 'Dev1/ai6', 'Dev1/ai7']

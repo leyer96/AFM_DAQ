@@ -49,8 +49,8 @@ class SendDataTab(QWidget):
         indicators_group_box_layout.addWidget(self.curr_harmonic,5,1,1,1)
         indicators_group_box.setLayout(indicators_group_box_layout)
         ## PHASE AND AMP PLOTS
-        self.phase_plot_widget = ScatterPlotWidget(title="Phase vs Frequency", xlabel="Frequency", ylabel="Amplitude",xunits="Hz",yunits="Deg.")
-        self.amp_plot_widget = ScatterPlotWidget(title="Amplitude vs Frequency", xlabel="Frequency", ylabel="Phase",xunits="Hz",yunits="V")
+        self.phase_plot_widget = ScatterPlotWidget(title="Phase vs Frequency", xlabel="Frequency", ylabel="Phase",xunits="Hz",yunits="Deg.")
+        self.amp_plot_widget = ScatterPlotWidget(title="Amplitude vs Frequency", xlabel="Frequency", ylabel="Amplitude",xunits="Hz",yunits="V")
         self.phase_plot_widget.setFixedSize(300,300)
         self.amp_plot_widget.setFixedSize(300,300)
 
