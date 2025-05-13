@@ -32,12 +32,13 @@ class ProcessingWorker(QRunnable):
                 self.signals.data.emit(psd_data)
                 self.signals.progress.emit(100)
                 return 
+            print(f"DATA SHAPE {data.shape}")
             # frame_data = data["Dev1/ai0"].to_numpy()
-            frame_data = data[0,:]
+            frame_data = data[:,0]
             # line_data = data["Dev1/ai1"].to_numpy()
-            line_data = data[1,:]
+            line_data = data[:,1]
             # pixel_data = data["Dev1/ai2"].to_numpy()
-            height_data = data[2,:]
+            height_data = data[:,3]
             # height_data = data["Dev1/ai3"].to_numpy()
             # FRAME
             frame_indexes = get_signal_indexes_numpy(frame_data)
@@ -70,15 +71,15 @@ class ProcessingWorker(QRunnable):
             elif op == "PFM" or op == "PFM - MultiFreq":
                 # AMP & PHASE
                 # amp_data = data["Dev1/ai4"].to_numpy()[fs:fe]
-                amp_data = data[4,:][fs:fe]
+                amp_data = data[:,4][fs:fe]
                 # phase_data = data["Dev1/ai5"].to_numpy()[fs:fe]
-                phase_data = data[5,:][fs:fe]
+                phase_data = data[:,5][fs:fe]
                 Z = calculate_PFM_grid_values(amp_data,phase_data,pixel_indexes,res)
                 if op == "PFM - MultiFreq":
                     # amp_lateral_data = data["Dev1/ai6"].to_numpy()[fs:fe]
-                    amp_lateral_data = data[5,:][fs:fe]
+                    amp_lateral_data = data[:,6][fs:fe]
                     # phase_lateral_data = data["Dev1/ai7"].to_numpy()[fs:fe]
-                    phase_lateral_data = data[6,:][fs:fe]
+                    phase_lateral_data = data[:,7][fs:fe]
                     Z2 = calculate_PFM_grid_values(amp_lateral_data,phase_lateral_data,pixel_indexes,res)
                     Z = np.stack(Z,Z2)
             self.signals.data.emit(Z)
