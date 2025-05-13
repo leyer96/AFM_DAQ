@@ -52,11 +52,7 @@ class AcquireTab(QWidget):
         self.plot_data = np.zeros(50000)
         self.plots_refs = [self.plot_widget.plot(np.array([]), pen="yellow")]
 
-        # ---- THREAD ---- #
-        self.threadpool = QThreadPool()
-
         # ---- CONFIG ---- #
-        self.is_recording = False
         self.is_streaming = False
         ## THREADS & TIMER
         self.threadpool = QThreadPool()
@@ -176,6 +172,8 @@ class AcquireTab(QWidget):
         self.threadpool.start(self.acquisition_worker)
         self.is_streaming = True
         self.toggle_inputs(state=False)
+        if mode == "WRITE":
+            self.record_btn.setEnabled(False)
 
     def stop_acquisition(self):
         if self.is_streaming:
@@ -185,7 +183,7 @@ class AcquireTab(QWidget):
             self.toggle_inputs(state=True)
             self.record_btn.setEnabled(True)
 
-    def toggle_inputs(self, state):
+    def toggle_inputs(self, state=True):
         self.n_channels_input.setEnabled(state)
         self.sample_rate_input.setEnabled(state)
         self.n_samples_input.setEnabled(state)
