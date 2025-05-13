@@ -16,9 +16,7 @@ from PySide6.QtWidgets import(
 )
 from PySide6.QtCore import QTimer, QThreadPool
 from PySide6.QtGui import QIcon
-from acquisition_thread import AcquisitionThread
-from recording_thread import RecordingThread
-from recording_worker import RecordingWorker
+from acquisition_worker import AcquisitionWorker
 from utils import Paths, CHANNELS_NAMES, STYLES
 import pyqtgraph as pg
 import numpy as np
@@ -52,8 +50,10 @@ class AcquireTab(QWidget):
         # ---- DATA ---- #
         self.channels_data = np.array([])
         self.plot_data = np.zeros(50000)
-        self.plots_refs = [self.plot_widget.plot(np.array([]), pen="yellow")] # CREAR PEN ANTES
-        self.buffer = queue.Queue()
+        self.plots_refs = [self.plot_widget.plot(np.array([]), pen="yellow")]
+
+        # ---- THREAD ---- #
+        self.threadpool = QThreadPool()
 
         # ---- CONFIG ---- #
         self.is_recording = False
@@ -149,55 +149,57 @@ class AcquireTab(QWidget):
             self.start_acquisition()
         else:
             self.stop_acquisition()
+
+    def start_acquisition(self, mode="READ"):
+        if hasattr(self, "acquisition_worker") and self.is_streaming:
+            self.acquisition_worker.stop()
+            self.acquisition_worker.signals.finished.connect(lambda: self.start_new_worker(mode))
+        else:
+            self.start_new_worker(mode)
     
-    def start_acquisition(self,mode="READ"):
+    def start_new_worker(self,mode="READ"):
         n_channels = self.n_channels_input.value()
         min_v = self.min_input_value_input.value()
         max_v = self.max_input_value_input.value()
         sample_rate = self.sample_rate_input.value()
         n_samples = self.n_samples_input.value()
         self.plot_timer.start(1000)
-        if mode == "READ":
-            self.acquisition_thread = AcquisitionThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=n_samples)
-        elif mode == "WRITETOREAD":
-            self.acquisition_thread.stop()
-            time.sleep(0.5)
-            self.acquisition_thread = AcquisitionThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=n_samples)
-        elif mode == "WRITE":
-            self.acquisition_thread.stop()
-            time.sleep(0.5)
-            self.record_btn.setEnabled(False)
-            self.acquisition_thread = RecordingThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=n_samples)
-        self.acquisition_thread.data.connect(self.on_new_data)
-        self.acquisition_thread.start()
+        self.acquisition_worker = AcquisitionWorker(
+            n_channels=n_channels,
+            min_v=min_v,
+            max_v=max_v,
+            sample_rate=sample_rate,
+            n_samples=n_samples,
+            mode=mode
+            )
+        self.acquisition_worker.signals.data.connect(self.on_new_data)
+        self.threadpool.start(self.acquisition_worker)
         self.is_streaming = True
-        self.n_channels_input.setEnabled(False)
-        self.sample_rate_input.setEnabled(False)
-        self.n_samples_input.setEnabled(False)
-        self.min_input_value_input.setEnabled(False)
-        self.max_input_value_input.setEnabled(False)
+        self.toggle_inputs(state=False)
 
     def stop_acquisition(self):
         if self.is_streaming:
-            self.acquisition_thread.stop()
+            self.acquisition_worker.stop()
             self.plot_timer.stop()
             self.is_streaming = False
-            self.n_channels_input.setEnabled(True)
-            self.sample_rate_input.setEnabled(True)
-            self.n_samples_input.setEnabled(True)
-            self.min_input_value_input.setEnabled(True)
-            self.max_input_value_input.setEnabled(True)
+            self.toggle_inputs(state=True)
             self.record_btn.setEnabled(True)
+
+    def toggle_inputs(self, state):
+        self.n_channels_input.setEnabled(state)
+        self.sample_rate_input.setEnabled(state)
+        self.n_samples_input.setEnabled(state)
+        self.min_input_value_input.setEnabled(state)
+        self.max_input_value_input.setEnabled(state)
 
 
     def stop_recording(self):
-        self.record_btn.setEnabled(True)
-        self.start_acquisition(mode="WRITETOREAD")
+        self.start_acquisition(mode="READ")
         dirname = QFileDialog().getExistingDirectory()
         if dirname:
             dlg = FileNameDialog(dirname)
             dlg.exec()
-
+        self.record_btn.setEnabled(True)
 
     def update_plot(self):
         if self.stream_data_option.isChecked():
