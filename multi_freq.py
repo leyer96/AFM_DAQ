@@ -11,10 +11,10 @@ from PySide6.QtCore import Qt, QThreadPool, QTimer
 from plot_widgets import ScatterPlotWidget
 from lockin_worker import LockinWorker
 from lockin_srs830_worker import Lockin830Worker
-from srsinst.sr860 import SR865
+# from srsinst.sr860 import SR865
 from lockin_config_widget import LockInConfigWidget
-from pymeasure.instruments.srs import SR830
-import pyvisa as visa
+# from pymeasure.instruments.srs import SR830
+# import pyvisa as visa
 import numpy as np
 
 class MultiFreqTab(QWidget):
@@ -115,7 +115,7 @@ class MultiFreqTab(QWidget):
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_plots)
 
-        self.get_visa_resources()
+        # self.get_visa_resources()
 
     def get_visa_resources(self):
         resources = visa.ResourceManager().list_resources()

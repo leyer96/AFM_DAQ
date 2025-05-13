@@ -9,10 +9,10 @@ from PySide6.QtWidgets import(
 from PySide6.QtCore import Qt, QThreadPool, QTimer
 from plot_widgets import ScatterPlotWidget
 from lockin_worker import LockinWorker
-from srsinst.sr860 import SR865
-from pymeasure.instruments.srs import SR830
+# from srsinst.sr860 import SR865
+# from pymeasure.instruments.srs import SR830
 from lockin_config_widget import LockInConfigWidget
-import pyvisa as visa
+# import pyvisa as visa
 import numpy as np
 
 class SendDataTab(QWidget):
@@ -103,7 +103,7 @@ class SendDataTab(QWidget):
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_plots)
 
-        self.get_visa_resources()
+        # self.get_visa_resources()
 
     def get_visa_resources(self):
         resources = visa.ResourceManager().list_resources()

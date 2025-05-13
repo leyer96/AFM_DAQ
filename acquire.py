@@ -25,6 +25,7 @@ import numpy as np
 from datetime import datetime
 import shutil
 import queue
+import time
 
 
 class AcquireTab(QWidget):
@@ -160,9 +161,12 @@ class AcquireTab(QWidget):
             self.acquisition_thread = AcquisitionThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=n_samples)
         elif mode == "WRITETOREAD":
             self.acquisition_thread.stop()
+            time.sleep(0.5)
             self.acquisition_thread = AcquisitionThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=n_samples)
         elif mode == "WRITE":
             self.acquisition_thread.stop()
+            time.sleep(0.5)
+            self.record_btn.setEnabled(False)
             self.acquisition_thread = RecordingThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=n_samples)
         self.acquisition_thread.data.connect(self.on_new_data)
         self.acquisition_thread.start()
@@ -188,7 +192,7 @@ class AcquireTab(QWidget):
 
     def stop_recording(self):
         self.record_btn.setEnabled(True)
-        self.start_acquisition(self,mode="WRITETOREAD")
+        self.start_acquisition(mode="WRITETOREAD")
         dirname = QFileDialog().getExistingDirectory()
         if dirname:
             dlg = FileNameDialog(dirname)
