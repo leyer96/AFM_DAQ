@@ -17,6 +17,7 @@ from PySide6.QtWidgets import(
 from PySide6.QtCore import QTimer, QThreadPool
 from PySide6.QtGui import QIcon
 from acquisition_thread import AcquisitionThread
+from recording_thread import RecordingThread
 from recording_worker import RecordingWorker
 from utils import Paths, CHANNELS_NAMES, STYLES
 import pyqtgraph as pg
@@ -85,7 +86,7 @@ class AcquireTab(QWidget):
         self.n_channels_input.valueChanged.connect(self.set_n_of_channels)
         self.min_input_value_input.valueChanged.connect(self.set_max_input)
         self.channel_selection_input.currentIndexChanged.connect(self.change_plots_visibility)
-        self.record_btn.clicked.connect(self.start_recording)
+        self.record_btn.clicked.connect(lambda: self.start_acquisition(mode="WRITE"))
         self.sample_rate_input.valueChanged.connect(self.handle_sample_rate_input_change)
         stop_btn.clicked.connect(self.stop_recording)
 
@@ -148,14 +149,21 @@ class AcquireTab(QWidget):
         else:
             self.stop_acquisition()
     
-    def start_acquisition(self):
+    def start_acquisition(self,mode="READ"):
         n_channels = self.n_channels_input.value()
         min_v = self.min_input_value_input.value()
         max_v = self.max_input_value_input.value()
         sample_rate = self.sample_rate_input.value()
         n_samples = self.n_samples_input.value()
         self.plot_timer.start(1000)
-        self.acquisition_thread = AcquisitionThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=n_samples)
+        if mode == "READ":
+            self.acquisition_thread = AcquisitionThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=n_samples)
+        elif mode == "WRITETOREAD":
+            self.acquisition_thread.stop()
+            self.acquisition_thread = AcquisitionThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=n_samples)
+        elif mode == "WRITE":
+            self.acquisition_thread.stop()
+            self.acquisition_thread = RecordingThread(n_channels=n_channels,min_v=min_v,max_v=max_v,sample_rate=sample_rate,n_samples=n_samples)
         self.acquisition_thread.data.connect(self.on_new_data)
         self.acquisition_thread.start()
         self.is_streaming = True
@@ -168,29 +176,19 @@ class AcquireTab(QWidget):
     def stop_acquisition(self):
         if self.is_streaming:
             self.acquisition_thread.stop()
+            self.plot_timer.stop()
             self.is_streaming = False
             self.n_channels_input.setEnabled(True)
             self.sample_rate_input.setEnabled(True)
             self.n_samples_input.setEnabled(True)
             self.min_input_value_input.setEnabled(True)
             self.max_input_value_input.setEnabled(True)
+            self.record_btn.setEnabled(True)
 
-    def start_recording(self):
-        self.record_btn.setEnabled(False)
-        self.csv_columns = ["Dev1/ai"+str(i) for i in range(len(self.plots_refs))]
-        self.record_file_path = None
-        self.record_file_path = './recording.csv'
-        try:
-            with open(self.record_file_path, 'w') as f:
-                f.write(','.join(self.csv_columns) + '\n')
-        except Exception as e:
-            print(e)
-        else:
-            self.is_recording = True
 
     def stop_recording(self):
-        self.is_recording = False
         self.record_btn.setEnabled(True)
+        self.start_acquisition(self,mode="WRITETOREAD")
         dirname = QFileDialog().getExistingDirectory()
         if dirname:
             dlg = FileNameDialog(dirname)
@@ -215,18 +213,6 @@ class AcquireTab(QWidget):
             n = new_data.shape[0]
             self.plot_data = np.roll(self.plot_data,-n)
             self.plot_data[-n:] = new_data
-        if self.is_recording:
-            active_threads = self.threadpool.activeThreadCount()
-            if not self.buffer.empty():
-                buffered_data = self.buffer.get()
-                recording_worker = RecordingWorker(filepath=self.record_file_path,csv_columns=self.csv_columns,new_data=buffered_data)
-                self.threadpool.start(recording_worker)
-            else:
-                if active_threads == 1:
-                    self.buffer.put(new_data)
-                else:
-                    recording_worker = RecordingWorker(filepath=self.record_file_path,csv_columns=self.csv_columns,new_data=new_data)
-                    self.threadpool.start(recording_worker)
 
     def change_plots_visibility(self, index):
         if index == 0:
@@ -263,7 +249,7 @@ class FileNameDialog(QDialog):
     def save_file(self):
         filename = self.filename_input.text()
         if filename:
-            src = "./recording.csv"
-            destination = self.dirname + "/" + filename + ".csv"
+            src = "./recording.tdms"
+            destination = self.dirname + "/" + filename + ".tdms"
             shutil.move(src,destination)
             self.close()
