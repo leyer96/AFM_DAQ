@@ -1,19 +1,40 @@
 import numpy as np
 import pandas as pd
+from nptdms import TdmsFile
 
 def load_data(path,rows_to_skip=None):
     data = np.array([])
+    if path.endswith(".tdms"):
+        data = load_tdms(path)
+    else:
+        data = load_csv(path,rows_to_skip=rows_to_skip)
+    return data
+        
+def load_tdms(path):
+    try:
+        tdms_file = TdmsFile.read(path)
+        group = [group.name for group in tdms_file.groups()][0]
+        channels = [ch.name for ch in tdms_file[group].channels()]
+        data = []
+        for channel in channels:
+            data.append(tdms_file[group][channel].data)
+        data = np.stack(data)
+    except Exception as e:
+            print(e)
+            return None
+    return data
+
+def load_csv(path,rows_to_skip=None):
     try:
         if rows_to_skip:
-            data = pd.read_csv(path, skiprows=rows_to_skip, dtype=np.float64)
+            df = pd.read_csv(path, skiprows=rows_to_skip, dtype=np.float64)
         else:
-            data = pd.read_csv(path,dtype=np.float64)
+            df = pd.read_csv(path,dtype=np.float64)
+        data = df.to_numpy()
     except Exception as e:
-        print("EXCEPTION RAISED WHILE LOADING")
         print(e)
         return None
     else:
-        print("SUCCESFUL LOADING")
         return data
     
 def attempt_data_load(path):

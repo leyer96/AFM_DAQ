@@ -41,7 +41,7 @@ class SendDataTab(QWidget):
         indicators_group_box_layout.addWidget(self.resonance_f,1,2,1,1)
         indicators_group_box_layout.addWidget(QLabel("Theta value"),2,0,1,1)
         indicators_group_box_layout.addWidget(QLabel("Current Voltage (V)"),2,1,1,1)
-        indicators_group_box_layout.addWidget(QLabel("Max. Amplitude (V)"),2,2,1,1)
+        indicators_group_box_layout.addWidget(QLabel("Max. Amplitude (mV)"),2,2,1,1)
         indicators_group_box_layout.addWidget(self.theta_value,3,0,1,1)
         indicators_group_box_layout.addWidget(self.curr_v,3,1,1,1)
         indicators_group_box_layout.addWidget(self.max_amp,3,2,1,1)
@@ -49,8 +49,8 @@ class SendDataTab(QWidget):
         indicators_group_box_layout.addWidget(self.curr_harmonic,5,1,1,1)
         indicators_group_box.setLayout(indicators_group_box_layout)
         ## PHASE AND AMP PLOTS
-        self.phase_plot_widget = ScatterPlotWidget(title="Amplitude vs Frequency", xlabel="Frequency", ylabel="Amplitude",xunits="Hz",yunits="V")
-        self.amp_plot_widget = ScatterPlotWidget(title="Phase vs Frequency", xlabel="Frequency", ylabel="Phase",xunits="Hz",yunits="Deg.")
+        self.phase_plot_widget = ScatterPlotWidget(title="Phase vs Frequency", xlabel="Frequency", ylabel="Amplitude",xunits="Hz",yunits="Deg.")
+        self.amp_plot_widget = ScatterPlotWidget(title="Amplitude vs Frequency", xlabel="Frequency", ylabel="Phase",xunits="Hz",yunits="V")
         self.phase_plot_widget.setFixedSize(300,300)
         self.amp_plot_widget.setFixedSize(300,300)
 
@@ -125,7 +125,7 @@ class SendDataTab(QWidget):
         self.thetas = np.array([])
         self.worker_lockin = LockinWorker(lockin=self.lockin,sine_output=l1_amp,f0=l1_f0,ff=l1_ff,f_step=l1_f_step)
         self.worker_lockin.signals.data.connect(self.on_new_data)
-        self.worker_lockin.signals.finished.connect(self.update_plots)
+        self.worker_lockin.signals.finished.connect(self.handle_finish)
         self.worker_lockin.signals.failed_connection.connect(lambda: QMessageBox.warning(self, "Connection Error", "No lock-in connection established."))
         self.threadpool.start(self.worker_lockin)
         self.timer.start(500)
@@ -145,11 +145,16 @@ class SendDataTab(QWidget):
         self.phase_plot_widget.update_plot(self.fs, self.thetas)
         self.amp_plot_widget.update_plot(self.fs, self.rs)
 
-    def stop_sweep(self):
-        self.worker_lockin.running = False
-        max_amp = np.max(self.rs)
+    def handle_finish(self):
+        max_amp = np.max(self.rs)*1000
         idx = np.argmax(self.rs)
         res_f = self.fs[idx]
         self.max_amp.setValue(max_amp)
         self.resonance_f.setValue(res_f)
         self.timer.stop()
+        self.update_plots()
+
+    def stop_sweep(self):
+        self.worker_lockin.running = False
+        self.handle_finish()
+        
