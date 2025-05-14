@@ -6,6 +6,9 @@ def load_data(path,rows_to_skip=None):
     data = np.array([])
     if path.endswith(".tdms"):
         data = load_tdms(path)
+    elif path.endswith(".npy"):
+        data = np.load(path)
+        data = data.T
     else:
         data = load_csv(path,rows_to_skip=rows_to_skip)
     return data
@@ -35,7 +38,7 @@ def load_csv(path,rows_to_skip=None):
         print(e)
         return None
     else:
-        return data
+        return data.T
     
 def attempt_data_load(path):
     for i in range(5):
@@ -47,9 +50,42 @@ def attempt_data_load(path):
             break
     return data
 
-def get_signal_indexes_numpy(data):
-    indexes = np.nonzero(np.absolute(np.diff(data)) > 1)[0]
-    indexes[::2] += 1
+def get_frame_indexes(frame_data, threshold=2):
+    diffs = np.diff(frame_data)
+    indexes = np.nonzero(np.abs(diffs) > threshold)[0]
+    indexes_diffs = np.diff(indexes)
+    max_diff_idx = np.argmax(indexes_diffs)
+    fs = indexes[max_diff_idx]
+    fe = indexes[max_diff_idx+1]
+    return fs,fe
+    
+
+def get_signal_indexes_numpy(data, threshold = 0.5):
+    diffs = np.diff(data)
+    indexes = np.nonzero(np.abs(diffs) > threshold)[0]
+    rising_edges = indexes[diffs[indexes] > 0] + 1
+    falling_edges = indexes[diffs[indexes] < 0] + 1
+    print(f"INITIAL: RISING EDGES SHAPE {rising_edges.shape}")
+    print(f"INITIAL: FALLING EDGES SHAPE {falling_edges.shape}")
+    if falling_edges[0] > rising_edges[0]:
+        falling_edges = falling_edges[1:]
+    if rising_edges.size > falling_edges.size:
+        rising_edges = rising_edges[0:falling_edges.size]
+    elif rising_edges.size < falling_edges.size:
+        falling_edges = falling_edges[0:rising_edges.size]
+    print(f"RISING EDGES SHAPE {rising_edges.shape}")
+    print(f"FALLING EDGES SHAPE {falling_edges.shape}")
+    indexes = np.stack([rising_edges,falling_edges])
+    n_lines = indexes.shape[1]
+    pow2 = np.log2(n_lines)
+    print(f"LOG 2: {pow2}")
+    if not pow2.is_integer():
+        delta = int(n_lines - 2**np.floor(pow2)) - 1
+        print(f"DELTA {delta}")
+        if delta > 0 and delta < 10:
+            indexes = indexes[:,1:-delta]
+        elif delta == 0:
+            indexes = indexes[:,1:]
     return indexes
 
 from scipy.signal import welch, detrend
@@ -91,11 +127,25 @@ def calculate_PFM_grid_values(amp_data,phase_data,pixel_indexes,res):
     ext = 300
     amps = np.zeros((res,res,ext))
     phases = np.zeros((res,res,ext))
+    print(f"AMP DATA SHAPE {amp_data.shape}")
+    print(f"NAN IN AMP DATA: {np.count_nonzero(np.isnan(amp_data))}")
+    print(f"PHASE DATA SHAPE {phase_data.shape}")
+    print(f"NAN IN PHASE DATA: {np.count_nonzero(np.isnan(phase_data))}")
     for i in range(res):
         for j in range(res):
             ps = pixel_indexes[i,j]
             pe = pixel_indexes[i,j+1]
-            index_max = int(ps + ext//2 + np.argmax(amp_data[ps+ext//2:pe-ext//2]))
+            if ps > pe:
+                ps_copy = ps
+                ps = pe
+                pe = ps_copy
+            # print(f"PS: {ps} & PE: {pe}")
+            # print(f"AMP DATA SIZE FOR PIXEL {i},{j}: {amp_data[ps:pe].size}")
+            try:
+                index_max = int(ps + np.argmax(amp_data[ps:pe]))
+            except Exception as e:
+                # print(e)
+                index_max = int(ps + ext//2 + np.argmax(amp_data[ps+ext//2:pe-ext//2]))
             x1 = int(index_max - ext//2)             
             x2 = int(index_max + ext//2)
             if x1 > ps and x2 < pe:

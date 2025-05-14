@@ -289,6 +289,32 @@ class VisualizeTab(QWidget):
             if self.pfm_3D_phase_op.isChecked():
                 self.pfm_3D_phase_window = SurfacePlotWindowMatplot(phases)
                 self.pfm_3D_phase_window.show()
+        elif op == "PFM - MultiFreq":
+            Z = data
+            amps = Z[0,:] 
+            phases = Z[1,:]
+            amps2 = Z[2,:] 
+            phases2 = Z[3,:]
+            if self.pfm_2D_amp_op.isChecked():
+                self.pfm_amp_cmap_widget.setup_widget(amps)
+            if self.pfm_2D_phase_op.isChecked():
+                self.pfm_phase_cmap_widget.setup_widget(phases)
+            if self.pfm_3D_amp_op.isChecked():
+                self.pfm_3D_amp_window = SurfacePlotWindowMatplot(amps)
+                self.pfm_3D_amp_window.show()
+            if self.pfm_3D_phase_op.isChecked():
+                self.pfm_3D_phase_window = SurfacePlotWindowMatplot(phases)
+                self.pfm_3D_phase_window.show()
+            if self.pfm_2D_amp2_op.isChecked():
+                self.pfm_amp2_cmap_widget.setup_widget(amps2)
+            if self.pfm_2D_phase2_op.isChecked():
+                self.pfm_phase2_cmap_widget.setup_widget(phases2)
+            if self.pfm_3D_amp2_op.isChecked():
+                self.pfm_3D_amp2_window = SurfacePlotWindowMatplot(amps2)
+                self.pfm_3D_amp2_window.show()
+            if self.pfm_3D_phase2_op.isChecked():
+                self.pfm_3D_phase2_window = SurfacePlotWindowMatplot(phases2)
+                self.pfm_3D_phase2_window.show()
         elif op == "PSD":
             frequencies = data["fs"]
             psd = data["psd"]
