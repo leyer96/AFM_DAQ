@@ -120,7 +120,7 @@ def get_psd(data):
     except:
         return None
     
-def remove_close_indexes(indexes, threshold=3):
+def remove_close_indexes(indexes, threshold=1000):
     indexes = np.array(indexes)
     diffs = np.diff(indexes)
     to_remove = np.nonzero(diffs < threshold)[0]

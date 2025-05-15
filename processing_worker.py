@@ -29,8 +29,10 @@ class BaseWorker(QRunnable):
         fs,fe = get_frame_indexes(frame_data,threshold=1)
         # LINE
         line_data = line_data[fs:fe]
-        line_indexes = get_line_indexes(line_data,threshold=0.5)
+        line_indexes = get_line_indexes(line_data,threshold=0.25)
         line_indexes = np.fliplr(line_indexes.T)
+        for s,e in line_indexes:
+            print(f"DISTANCE: {s-e}")
         # RESOLUTION
         res = line_indexes.size//2
         # PIXEL
