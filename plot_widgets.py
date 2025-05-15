@@ -3,6 +3,7 @@ import pyqtgraph as pg
 from PySide6.QtCore import Signal
 import pyqtgraph.opengl as gl
 import numpy as np
+from scipy.signal import detrend
 import matplotlib.cm as cm
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
@@ -39,6 +40,7 @@ class CmapWidget(pg.ImageView):
         super().__init__()
         self.setFixedSize(250,250)
         self.image_item = pg.ImageItem()
+        self.prev_img = None
         self.h_line = pg.InfiniteLine(movable=True,angle=0)
         self.v_line = pg.InfiniteLine(movable=True,angle=90)
         self.ui.menuBtn.hide()
@@ -52,10 +54,10 @@ class CmapWidget(pg.ImageView):
         self.image = img
         self.n_dim = img.ndim
         if self.n_dim == 2:
-            self.image_item.setImage(img)
+            self.image_item.setImage(self.image)
         else:
-            img = img[:,:,0]
-            self.image_item.setImage(img)
+            self.image = img[:,:,0]
+            self.image_item.setImage(self.image)
         color_map = pg.colormap.getFromMatplotlib(color) 
         color_map.map(img, mode='float') 
         self.image_item.setColorMap(color_map)
@@ -85,6 +87,18 @@ class CmapWidget(pg.ImageView):
             values = self.image[x_pos,pos,1:]
         self.v_values.emit(values)
 
+    def detrend_image(self):
+        self.prev_img = self.image.copy()
+        image = detrend(self.image)
+        self.setup_widget(image)
+
+    def go_back(self):
+        if self.prev_img is not None:
+            image = self.prev_img.copy()
+            self.prev_img = self.image.copy()
+            self.setup_widget(image)
+
+
 class SurfacePlotDialog(QDialog):
     def __init__(self,Z,parent=None):
         super().__init__(parent)
@@ -112,23 +126,48 @@ class SurfacePlotWindowMatplot(QWidget):
     def __init__(self, Z,title="",xlabel="",ylabel="",zlabel=""):
         super().__init__()
         self.setMinimumSize(500,500)
-        fig = Figure(figsize=(5,3))
-        fig_canvas = FigureCanvas(fig)
-        fig_canvas.setParent(self)
-        ax = fig_canvas.figure.add_subplot(111,projection="3d")
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        ax.set_zlabel(zlabel)
-        X = np.arange(Z.shape[0])
-        Y = np.arange(Z.shape[1])
-        X, Y = np.meshgrid(X, Y)
-        if Z.ndim == 3:
-            Z = Z[:,:,0]
-        surf = ax.plot_surface(X,Y,Z,cmap=cm.YlOrBr)
-        fig.colorbar(surf,shrink=0.5,aspect=5)
+        self.fig = Figure(figsize=(5,3))
+        self.fig_canvas = FigureCanvas(self.fig)
+        self.fig_canvas.setParent(self)
+        self.Z = Z
+        self.title = title
+        self.xlabel = xlabel
+        self.ylabel = ylabel
+        self.zlabel = zlabel
+        self.prev_img = None
         layout = QVBoxLayout()
-        layout.addWidget(NavigationToolbar(fig_canvas, self))
-        layout.addWidget(fig_canvas)
+        layout.addWidget(NavigationToolbar(self.fig_canvas, self))
+        layout.addWidget(self.fig_canvas)
         self.setLayout(layout)
+
+        self.setup_widget()
+
+    def setup_widget(self):
+        ax = self.fig_canvas.figure.add_subplot(111,projection="3d")
+        ax.set_title(self.title)
+        ax.set_xlabel(self.xlabel)
+        ax.set_ylabel(self.ylabel)
+        ax.set_zlabel(self.zlabel)
+        X = np.arange(self.Z.shape[0])
+        Y = np.arange(self.Z.shape[1])
+        self.X, self.Y = np.meshgrid(X, Y)
+        if self.Z.ndim == 3:
+            self.Z = self.Z[:,:,0]
+        self.surf = ax.plot_surface(self.X,self.Y,self.Z,cmap=cm.YlOrBr)
+        self.fig.colorbar(self.surf,shrink=0.5,aspect=5)
+
+    def detrend_image(self):
+        self.prev_img = self.Z.copy()
+        self.Z = detrend(self.Z)
+        self.surf.remove()
+        self.setup_widget()
+
+    def go_back(self):
+        if self.prev_img is not None:
+            Z = self.prev_img.copy()
+            self.prev_img = self.Z.copy()
+            self.Z = Z
+            self.surf.remove()
+            self.setup_widget()
+
 
