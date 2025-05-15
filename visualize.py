@@ -13,7 +13,12 @@ from PySide6.QtWidgets import(
     QWidget
 )
 from PySide6.QtCore import QThreadPool
-from processing_worker import ProcessingWorker
+from processing_worker import (
+    TopographyWorker,
+    PFMWorker,
+    LVPFMWorker,
+    PSDWorker
+)
 from plot_widgets import CmapWidget, ScatterPlotWidget, SurfacePlotWindowMatplot
 import pyqtgraph as pg
 import numpy as np
@@ -51,7 +56,7 @@ class VisualizeTab(QWidget):
             self.pfm_amp_curve_op,
             self.pfm_phase_curve_op
         ]
-        # PFM - MULTIFREQ OPTIONS
+        # LVPFM OPTIONS
         self.pfm_2D_amp2_op = QCheckBox("PFM 2D Amp - Lateral")
         self.pfm_2D_phase2_op = QCheckBox("PFM 2D Phase - Lateral") 
         self.pfm_3D_amp2_op = QCheckBox("PFM 3D Amp - Lateral (New Window)")
@@ -87,7 +92,7 @@ class VisualizeTab(QWidget):
         self.pfm_3D_phase2_window = None
         # CONFIG
         self.progress_bar.hide()
-        self.study_op.addItems(["Topography", "PFM", "PFM - MultiFreq" ,"PSD"])
+        self.study_op.addItems(["Topography", "PFM", "LVPFM" ,"PSD"])
         self.path_input.setEnabled(False)
         self.topo_2D_op.setChecked(True)
         self.topo_profile_line_op.setChecked(True)
@@ -230,7 +235,14 @@ class VisualizeTab(QWidget):
         self.study_op.setEnabled(False)
         self.choose_path_btn.setEnabled(False)
         self.progress_bar.show()
-        worker = ProcessingWorker(path,op=op)
+        if op == "Topography":
+            worker = TopographyWorker(path)    
+        elif op == "PFM":
+            worker = PFMWorker(path)
+        elif op == "LVPFM":
+            worker = LVPFMWorker(path)
+        elif op == "PSD":
+            worker = PSDWorker(path)
         worker.signals.data.connect(self.create_plots)
         worker.signals.error.connect(self.handle_error)
         worker.signals.progress.connect(self.update_progress_bar)
@@ -276,44 +288,44 @@ class VisualizeTab(QWidget):
                 self.topo_3D_window = SurfacePlotWindowMatplot(Z,xlabel="Pixel",ylabel="Pixel",zlabel=zlabel_3d)
                 self.topo_3D_window.show()
         elif op == "PFM":
-            Z = data
-            amps = Z[0,:]
-            phases = Z[1,:]
+            amp_and_phase = data
+            amp = amp_and_phase[0,:]
+            phase = amp_and_phase[1,:]
             if self.pfm_2D_amp_op.isChecked():
-                self.pfm_amp_cmap_widget.setup_widget(amps)
+                self.pfm_amp_cmap_widget.setup_widget(amp)
             if self.pfm_2D_phase_op.isChecked():
-                self.pfm_phase_cmap_widget.setup_widget(phases)
+                self.pfm_phase_cmap_widget.setup_widget(phase)
             if self.pfm_3D_amp_op.isChecked():
-                self.pfm_3D_amp_window = SurfacePlotWindowMatplot(amps)
+                self.pfm_3D_amp_window = SurfacePlotWindowMatplot(amp)
                 self.pfm_3D_amp_window.show()
             if self.pfm_3D_phase_op.isChecked():
-                self.pfm_3D_phase_window = SurfacePlotWindowMatplot(phases)
+                self.pfm_3D_phase_window = SurfacePlotWindowMatplot(phase)
                 self.pfm_3D_phase_window.show()
-        elif op == "PFM - MultiFreq":
-            Z = data
-            amps = Z[0,:] 
-            phases = Z[1,:]
-            amps2 = Z[2,:] 
-            phases2 = Z[3,:]
+        elif op == "LVPFM":
+            amps_and_phases = data
+            amp = amps_and_phases[0,:] 
+            phase = amps_and_phases[1,:]
+            amp2 = amps_and_phases[2,:] 
+            phase2 = amps_and_phases[3,:]
             if self.pfm_2D_amp_op.isChecked():
-                self.pfm_amp_cmap_widget.setup_widget(amps)
+                self.pfm_amp_cmap_widget.setup_widget(amp)
             if self.pfm_2D_phase_op.isChecked():
-                self.pfm_phase_cmap_widget.setup_widget(phases)
+                self.pfm_phase_cmap_widget.setup_widget(phase)
             if self.pfm_3D_amp_op.isChecked():
-                self.pfm_3D_amp_window = SurfacePlotWindowMatplot(amps)
+                self.pfm_3D_amp_window = SurfacePlotWindowMatplot(amp)
                 self.pfm_3D_amp_window.show()
             if self.pfm_3D_phase_op.isChecked():
-                self.pfm_3D_phase_window = SurfacePlotWindowMatplot(phases)
+                self.pfm_3D_phase_window = SurfacePlotWindowMatplot(phase)
                 self.pfm_3D_phase_window.show()
             if self.pfm_2D_amp2_op.isChecked():
-                self.pfm_amp2_cmap_widget.setup_widget(amps2)
+                self.pfm_amp2_cmap_widget.setup_widget(amp2)
             if self.pfm_2D_phase2_op.isChecked():
-                self.pfm_phase2_cmap_widget.setup_widget(phases2)
+                self.pfm_phase2_cmap_widget.setup_widget(phase2)
             if self.pfm_3D_amp2_op.isChecked():
-                self.pfm_3D_amp2_window = SurfacePlotWindowMatplot(amps2)
+                self.pfm_3D_amp2_window = SurfacePlotWindowMatplot(amp2)
                 self.pfm_3D_amp2_window.show()
             if self.pfm_3D_phase2_op.isChecked():
-                self.pfm_3D_phase2_window = SurfacePlotWindowMatplot(phases2)
+                self.pfm_3D_phase2_window = SurfacePlotWindowMatplot(phase2)
                 self.pfm_3D_phase2_window.show()
         elif op == "PSD":
             frequencies = data["fs"]

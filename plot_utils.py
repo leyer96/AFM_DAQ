@@ -60,31 +60,28 @@ def get_frame_indexes(frame_data, threshold=2):
     return fs,fe
     
 
-def get_signal_indexes_numpy(data, threshold = 0.5):
+def get_line_indexes(data, threshold = 1):
     diffs = np.diff(data)
     indexes = np.nonzero(np.abs(diffs) > threshold)[0]
     rising_edges = indexes[diffs[indexes] > 0] + 1
+    rising_edges = remove_close_indexes(rising_edges)
     falling_edges = indexes[diffs[indexes] < 0] + 1
-    print(f"INITIAL: RISING EDGES SHAPE {rising_edges.shape}")
-    print(f"INITIAL: FALLING EDGES SHAPE {falling_edges.shape}")
+    falling_edges = remove_close_indexes(falling_edges)
     if falling_edges[0] > rising_edges[0]:
         falling_edges = falling_edges[1:]
-    if rising_edges.size > falling_edges.size:
-        rising_edges = rising_edges[0:falling_edges.size]
-    elif rising_edges.size < falling_edges.size:
-        falling_edges = falling_edges[0:rising_edges.size]
-    print(f"RISING EDGES SHAPE {rising_edges.shape}")
-    print(f"FALLING EDGES SHAPE {falling_edges.shape}")
+    min_len = min([rising_edges.size, falling_edges.size])
+    rising_edges = rising_edges[0:min_len]
+    falling_edges = falling_edges[0:min_len]
     indexes = np.stack([rising_edges,falling_edges])
     n_lines = indexes.shape[1]
     pow2 = np.log2(n_lines)
-    print(f"LOG 2: {pow2}")
     if not pow2.is_integer():
-        delta = int(n_lines - 2**np.floor(pow2)) - 1
-        print(f"DELTA {delta}")
-        if delta > 0 and delta < 10:
+        nearest_pow2 = 2**int(np.floor(pow2))
+        delta = n_lines - nearest_pow2
+        if delta > 1 and delta < 10:
+            delta -= 1
             indexes = indexes[:,1:-delta]
-        elif delta == 0:
+        elif delta == 1:
             indexes = indexes[:,1:]
     return indexes
 
@@ -122,6 +119,14 @@ def get_psd(data):
         return data
     except:
         return None
+    
+def remove_close_indexes(indexes, threshold=3):
+    indexes = np.array(indexes)
+    diffs = np.diff(indexes)
+    to_remove = np.nonzero(diffs < threshold)[0]
+    mask = np.ones(len(indexes), dtype=bool)
+    mask[to_remove] = False
+    return indexes[mask]
     
 def calculate_PFM_grid_values(amp_data,phase_data,pixel_indexes,res):
     ext = 300
