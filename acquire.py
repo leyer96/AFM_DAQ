@@ -93,7 +93,7 @@ class AcquireTab(QWidget):
         f1.addRow("Plot channel", self.channel_selection_input)
         acquisition_config_group_box.setLayout(f1)
         f2 = QFormLayout()
-        f2.addRow("# of channels to acquire", self.n_channels_input)
+        f2.addRow("Num. of channels to acquire", self.n_channels_input)
         f2.addRow("Min. Value (V)", self.min_input_value_input)
         f2.addRow("Max. Value (V)", self.max_input_value_input)
         f2.addRow("DAQ Sample Rate (samples/s)", self.sample_rate_input)
