@@ -32,8 +32,6 @@ class VisualizeTab(QWidget):
         self.study_op = QComboBox()
         self.path_input = QLineEdit()
         self.choose_path_btn = QPushButton("Select Data")
-        self.remove_linear_trend_btn = QPushButton("Detrend data")
-        self.go_back_btn = QPushButton("Go back")
         self.progress_bar = QProgressBar()
         # TOPOGRAPHY OPTIONS
         self.topo_2D_op = QCheckBox("Topo 2D")
@@ -94,7 +92,6 @@ class VisualizeTab(QWidget):
         self.pfm_3D_amp2_window = None
         self.pfm_3D_phase2_window = None
         # CONFIG
-        self.remove_linear_trend_btn.setSizePolicy(QSizePolicy.Maximum,QSizePolicy.Maximum)
         self.progress_bar.hide()
         self.study_op.addItems(["Topography", "PFM", "LVPFM" ,"PSD"])
         self.path_input.setEnabled(False)
@@ -143,8 +140,6 @@ class VisualizeTab(QWidget):
         self.pfm_amp2_curve_op.toggled.connect(lambda checked: self.pfm_amp2_curve_widget.show() if checked else self.pfm_amp2_curve_widget.hide())
         self.pfm_phase_curve_op.toggled.connect(lambda checked: self.pfm_phase_curve_widget.show() if checked else self.pfm_phase_curve_widget.hide())
         self.pfm_phase2_curve_op.toggled.connect(lambda checked: self.pfm_phase2_curve_widget.show() if checked else self.pfm_phase2_curve_widget.hide())
-        self.remove_linear_trend_btn.clicked.connect(self.detrend_data)
-        self.go_back_btn.clicked.connect(self.go_back)
 
         # LAYOUT
         layout = QVBoxLayout()
@@ -197,10 +192,6 @@ class VisualizeTab(QWidget):
         x_layout5.addWidget(self.pfm_phase2_curve_widget)
 
         x_layout6 = QHBoxLayout()
-        x_layout6.addWidget(self.remove_linear_trend_btn)
-        x_layout6.addWidget(self.go_back_btn)
-        x_layout6.setAlignment(self.remove_linear_trend_btn, Qt.AlignHCenter)
-        x_layout6.setAlignment(self.go_back_btn, Qt.AlignHCenter)
 
         layout.addLayout(x_layout1)
         layout.addLayout(x_layout2)
@@ -359,65 +350,72 @@ class VisualizeTab(QWidget):
         self.choose_path_btn.setEnabled(True)
 
     def detrend_data(self):
-        op = self.study_op.currentText()
-        if op == "Topography":
-            if self.topo_2D_op.isChecked():
-                self.topo_cmap_widget.detrend_image()
-            if self.topo_3D_op.isChecked():
-                self.topo_3D_window.detrend_image()
-        elif op == "PFM":
-            if self.pfm_2D_amp_op.isChecked():
-                self.pfm_amp_cmap_widget.detrend_image()
-            if self.pfm_2D_phase_op.isChecked():
-                self.pfm_phase_cmap_widget.detrend_image()
-            if self.pfm_3D_amp_op.isChecked():
-                self.pfm_3D_amp_window.detrend_image()
-            if self.pfm_3D_phase_op.isChecked():
-                self.pfm_3D_phase_window.detrend_image()
-        elif op == "LVPFM":
-            if self.pfm_2D_amp_op.isChecked():
-                self.pfm_amp_cmap_widget.detrend_image()
-            if self.pfm_2D_phase_op.isChecked():
-                self.pfm_phase_cmap_widget.detrend_image()
-            if self.pfm_3D_amp_op.isChecked():
-                self.pfm_3D_amp_window.detrend_image()
-            if self.pfm_3D_phase_op.isChecked():
-                self.pfm_3D_phase_window.detrend_image()
-            if self.pfm_2D_amp2_op.isChecked():
-                self.pfm_amp2_cmap_widget.detrend_image()
-            if self.pfm_3D_amp2_op.isChecked():
-                self.pfm_3D_amp2_window.detrend_image()
-            if self.pfm_3D_phase2_op.isChecked():
-                self.pfm_3D_phase2_window.detrend_image()
+        try:
+            op = self.study_op.currentText()
+            if op == "Topography":
+                if self.topo_2D_op.isChecked():
+                    self.topo_cmap_widget.detrend_image()
+                if self.topo_3D_op.isChecked():
+                    self.topo_3D_window.detrend_image()
+            elif op == "PFM":
+                if self.pfm_2D_amp_op.isChecked():
+                    self.pfm_amp_cmap_widget.detrend_image()
+                if self.pfm_2D_phase_op.isChecked():
+                    self.pfm_phase_cmap_widget.detrend_image()
+                if self.pfm_3D_amp_op.isChecked():
+                    self.pfm_3D_amp_window.detrend_image()
+                if self.pfm_3D_phase_op.isChecked():
+                    self.pfm_3D_phase_window.detrend_image()
+            elif op == "LVPFM":
+                if self.pfm_2D_amp_op.isChecked():
+                    self.pfm_amp_cmap_widget.detrend_image()
+                if self.pfm_2D_phase_op.isChecked():
+                    self.pfm_phase_cmap_widget.detrend_image()
+                if self.pfm_3D_amp_op.isChecked():
+                    self.pfm_3D_amp_window.detrend_image()
+                if self.pfm_3D_phase_op.isChecked():
+                    self.pfm_3D_phase_window.detrend_image()
+                if self.pfm_2D_amp2_op.isChecked():
+                    self.pfm_amp2_cmap_widget.detrend_image()
+                if self.pfm_3D_amp2_op.isChecked():
+                    self.pfm_3D_amp2_window.detrend_image()
+                if self.pfm_3D_phase2_op.isChecked():
+                    self.pfm_3D_phase2_window.detrend_image()
+        except AttributeError as e:
+            QMessageBox.information(self, "Invalid operation","Operation not available")
 
     def go_back(self):
-        op = self.study_op.currentText()
-        if op == "Topography":
-            if self.topo_2D_op.isChecked():
-                self.topo_cmap_widget.go_back()
-            if self.topo_3D_op.isChecked():
-                self.topo_3D_window.go_back()
-        elif op == "PFM":
-            if self.pfm_2D_amp_op.isChecked():
-                self.pfm_amp_cmap_widget.go_back()
-            if self.pfm_2D_phase_op.isChecked():
-                self.pfm_phase_cmap_widget.go_back()
-            if self.pfm_3D_amp_op.isChecked():
-                self.pfm_3D_amp_window.go_back()
-            if self.pfm_3D_phase_op.isChecked():
-                self.pfm_3D_phase_window.go_back()
-        elif op == "LVPFM":
-            if self.pfm_2D_amp_op.isChecked():
-                self.pfm_amp_cmap_widget.go_back()
-            if self.pfm_2D_phase_op.isChecked():
-                self.pfm_phase_cmap_widget.go_back()
-            if self.pfm_3D_amp_op.isChecked():
-                self.pfm_3D_amp_window.go_back()
-            if self.pfm_3D_phase_op.isChecked():
-                self.pfm_3D_phase_window.go_back()
-            if self.pfm_2D_amp2_op.isChecked():
-                self.pfm_amp2_cmap_widget.go_back()
-            if self.pfm_3D_amp2_op.isChecked():
-                self.pfm_3D_amp2_window.go_back()
-            if self.pfm_3D_phase2_op.isChecked():
-                self.pfm_3D_phase2_window.go_back()
+        try:
+            op = self.study_op.currentText()
+            if op == "Topography":
+                if self.topo_2D_op.isChecked():
+                    self.topo_cmap_widget.go_back()
+                if self.topo_3D_op.isChecked():
+                    self.topo_3D_window.go_back()
+            elif op == "PFM":
+                if self.pfm_2D_amp_op.isChecked():
+                    self.pfm_amp_cmap_widget.go_back()
+                if self.pfm_2D_phase_op.isChecked():
+                    self.pfm_phase_cmap_widget.go_back()
+                if self.pfm_3D_amp_op.isChecked():
+                    self.pfm_3D_amp_window.go_back()
+                if self.pfm_3D_phase_op.isChecked():
+                    self.pfm_3D_phase_window.go_back()
+            elif op == "LVPFM":
+                if self.pfm_2D_amp_op.isChecked():
+                    self.pfm_amp_cmap_widget.go_back()
+                if self.pfm_2D_phase_op.isChecked():
+                    self.pfm_phase_cmap_widget.go_back()
+                if self.pfm_3D_amp_op.isChecked():
+                    self.pfm_3D_amp_window.go_back()
+                if self.pfm_3D_phase_op.isChecked():
+                    self.pfm_3D_phase_window.go_back()
+                if self.pfm_2D_amp2_op.isChecked():
+                    self.pfm_amp2_cmap_widget.go_back()
+                if self.pfm_3D_amp2_op.isChecked():
+                    self.pfm_3D_amp2_window.go_back()
+                if self.pfm_3D_phase2_op.isChecked():
+                    self.pfm_3D_phase2_window.go_back()
+        except AttributeError as e:
+            print(e)
+            QMessageBox.information(self, "Invalid operation","Operation not available")

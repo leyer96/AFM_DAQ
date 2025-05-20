@@ -31,8 +31,10 @@ class MainWindow(QMainWindow):
         menu = self.menuBar()
         tools_menu = menu.addMenu("&Tools")
         convert_files_menu = tools_menu.addMenu("&Convert Files")
+        image_menu = menu.addMenu("&Image")
 
-        ## ACTIONS
+        # ACTIONS
+        ## TOOLS
         to_csv_action = QAction(
             text="to .csv",
             parent=convert_files_menu)
@@ -44,6 +46,18 @@ class MainWindow(QMainWindow):
 
         to_csv_action.triggered.connect(self.convert_tdms_to_csv)
         to_npy_action.triggered.connect(self.convert_tdms_to_numpy)
+        ## IMAGE
+        detrend_image_action = QAction(
+            text="Detrend image",
+            parent=image_menu)
+        go_back_image_action = QAction(
+            text="Go Back",
+            parent=image_menu)
+        image_menu.addAction(detrend_image_action)
+        image_menu.addAction(go_back_image_action)
+
+        detrend_image_action.triggered.connect(self.visualize_tab.detrend_data)
+        go_back_image_action.triggered.connect(self.visualize_tab.go_back)
 
         self.setCentralWidget(tab_widget)
 
