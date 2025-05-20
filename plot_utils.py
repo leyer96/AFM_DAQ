@@ -129,13 +129,9 @@ def remove_close_indexes(indexes, threshold=1000):
     return indexes[mask]
     
 def calculate_PFM_grid_values(amp_data,phase_data,pixel_indexes,res):
-    ext = 300
+    ext = int(np.min(np.abs(np.gradient(pixel_indexes)[1]))) - 1
     amps = np.zeros((res,res,ext))
     phases = np.zeros((res,res,ext))
-    print(f"AMP DATA SHAPE {amp_data.shape}")
-    print(f"NAN IN AMP DATA: {np.count_nonzero(np.isnan(amp_data))}")
-    print(f"PHASE DATA SHAPE {phase_data.shape}")
-    print(f"NAN IN PHASE DATA: {np.count_nonzero(np.isnan(phase_data))}")
     for i in range(res):
         for j in range(res):
             ps = pixel_indexes[i,j]
@@ -144,19 +140,14 @@ def calculate_PFM_grid_values(amp_data,phase_data,pixel_indexes,res):
                 ps_copy = ps
                 ps = pe
                 pe = ps_copy
-            # print(f"PS: {ps} & PE: {pe}")
-            # print(f"AMP DATA SIZE FOR PIXEL {i},{j}: {amp_data[ps:pe].size}")
+            index_max = ps + np.argmax(amp_data[ps:pe])
+            x1 = index_max - ext//2
+            x2 = index_max + ext//2
             try:
-                index_max = int(ps + np.argmax(amp_data[ps:pe]))
-            except Exception as e:
-                # print(e)
-                index_max = int(ps + ext//2 + np.argmax(amp_data[ps+ext//2:pe-ext//2]))
-            x1 = int(index_max - ext//2)             
-            x2 = int(index_max + ext//2)
-            if x1 > ps and x2 < pe:
                 amps[i,j,:] = amp_data[x1:x2]
                 phases[i,j,:] = phase_data[x1:x2] * 18 # CONVERSION FROM V TO DEG.
-            else:
+            except Exception as e:
+                print(e)
                 amps[i,j,:] = 0
                 phases[i,j,:] = 0
             amps[i,j,0] = np.max(amp_data[ps:pe])

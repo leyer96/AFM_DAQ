@@ -57,6 +57,7 @@ class CmapWidget(pg.ImageView):
             self.image_item.setImage(self.image)
         else:
             self.image = img[:,:,0]
+            self.data_cube = img
             self.image_item.setImage(self.image)
         color_map = pg.colormap.getFromMatplotlib(color) 
         color_map.map(img, mode='float') 
@@ -73,8 +74,9 @@ class CmapWidget(pg.ImageView):
         if self.n_dim == 2:
             values = self.image[:,pos]
         else:
+            print(f"DATA CUBE SHAPE: {self.data_cube.shape}")
             y_pos = int(self.v_line.value())
-            values = self.image[pos,y_pos,1:]
+            values = self.data_cube[pos,y_pos,1:]
         self.h_values.emit(values)
 
     def handle_v_line_change(self, pos):
@@ -83,8 +85,9 @@ class CmapWidget(pg.ImageView):
         if self.n_dim == 2:
             values = self.image[pos,:]
         else:
+            print(f"DATA CUBE SHAPE: {self.data_cube.shape}")
             x_pos = int(self.v_line.value())
-            values = self.image[x_pos,pos,1:]
+            values = self.data_cube[x_pos,pos,1:]
         self.v_values.emit(values)
 
     def detrend_image(self):
@@ -97,6 +100,10 @@ class CmapWidget(pg.ImageView):
             image = self.prev_img.copy()
             self.prev_img = self.image.copy()
             self.setup_widget(image)
+
+    def set_sensitivity_rate(self,sensitivity_rate):
+        image = self.image * sensitivity_rate
+        self.setup_widget(image)
 
 
 class SurfacePlotDialog(QDialog):
@@ -169,5 +176,10 @@ class SurfacePlotWindowMatplot(QWidget):
             self.Z = Z
             self.surf.remove()
             self.setup_widget()
+
+    def set_sensitivity_rate(self,sensitivity_rate):
+        self.Z = self.Z * sensitivity_rate
+        self.zlabel = "Height (nm)"
+        self.setup_widget()
 
 

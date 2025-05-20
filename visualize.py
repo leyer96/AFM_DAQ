@@ -269,25 +269,10 @@ class VisualizeTab(QWidget):
         self.progress_bar.hide()
         op = self.study_op.currentText()
         if op == "Topography":
-            sensitivity_rate, ok = QInputDialog.getDouble(
-                self,
-                "Sensitivity rate",
-                "Sensitivity rate (V/nm):",
-                value=0,
-                minValue=0,
-                maxValue=2000,
-                decimals=2,
-                )
-            if ok and sensitivity_rate:
-                Z = data * sensitivity_rate
-                zlabel_3d = "Height (nm)"
-                self.topo_x_profile_widget.set_ylabel("Height (nm)")
-                self.topo_y_profile_widget.set_ylabel("Height (nm)")
-            else:
-                Z = data
-                zlabel_3d = "Height (V)"
-                self.topo_x_profile_widget.set_ylabel("Height (V)")
-                self.topo_y_profile_widget.set_ylabel("Height (V)")
+            Z = data
+            zlabel_3d = "Height (V)"
+            self.topo_x_profile_widget.set_ylabel("Height (V)")
+            self.topo_y_profile_widget.set_ylabel("Height (V)")
             if self.topo_2D_op.isChecked():
                 self.topo_cmap_widget.setup_widget(Z)
             if self.topo_3D_op.isChecked():
@@ -419,3 +404,22 @@ class VisualizeTab(QWidget):
         except AttributeError as e:
             print(e)
             QMessageBox.information(self, "Invalid operation","Operation not available")
+
+    def add_sensitivity_rate(self):
+        sensitivity_rate, ok = QInputDialog.getDouble(
+                self,
+                "Sensitivity rate",
+                "Sensitivity rate (V/nm):",
+                value=0,
+                minValue=0,
+                maxValue=2000,
+                decimals=2,
+                )
+        if ok and sensitivity_rate:
+            if self.topo_2D_op.isChecked():
+                self.topo_cmap_widget.set_sensitivity_rate(sensitivity_rate)
+            if self.topo_3D_op.isChecked():
+                self.topo_3D_window.set_sensitivity_rate(sensitivity_rate)
+            if self.topo_profile_line_op.isChecked():
+                self.topo_x_profile_widget.set_ylabel("Height (nm)")
+                self.topo_y_profile_widget.set_ylabel("Height (nm)")

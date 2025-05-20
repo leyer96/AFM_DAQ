@@ -126,6 +126,7 @@ class PFMWorker(BaseWorker):
             print(e)
             self.signals.error.emit(f"ERROR WHILE PROCESSING: {e}")
 
+import traceback
 class LVPFMWorker(BaseWorker):
     @Slot()
     def run(self):
@@ -159,6 +160,7 @@ class LVPFMWorker(BaseWorker):
             self.signals.data.emit(amps_and_phases)
             self.signals.progress.emit(100)
         except Exception as e:
+            traceback.print_exc()
             print(e)
             self.signals.error.emit(f"ERROR WHILE PROCESSING: {e}")
 

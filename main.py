@@ -53,11 +53,16 @@ class MainWindow(QMainWindow):
         go_back_image_action = QAction(
             text="Go Back",
             parent=image_menu)
+        convert_V_to_nm = QAction(
+            text="Convert to nm",
+            parent=image_menu)
         image_menu.addAction(detrend_image_action)
         image_menu.addAction(go_back_image_action)
+        image_menu.addAction(convert_V_to_nm)
 
         detrend_image_action.triggered.connect(self.visualize_tab.detrend_data)
         go_back_image_action.triggered.connect(self.visualize_tab.go_back)
+        convert_V_to_nm.triggered.connect(self.visualize_tab.add_sensitivity_rate)
 
         self.setCentralWidget(tab_widget)
 
