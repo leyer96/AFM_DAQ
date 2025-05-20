@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QTabWidget,
 )
-from threading import Thread
+from PySide6.QtGui import QAction
 from acquire import AcquireTab
 from visualize import VisualizeTab
 from send import SendDataTab
@@ -12,31 +12,51 @@ from matplotlib.backends.backend_qtagg import FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 
 
-class DAQInterface:
-    def __init__(self, main_window):
-        self.main_window = main_window
-        self.main_window.setWindowTitle("AFM_DAQ_Visualizer")
-        self.acquire_window = AcquireTab()
-        self.visualize_window = VisualizeTab()
-        self.send_data_window = SendDataTab()
-        self.multi_freq_window = MultiFreqTab()
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("AFM_DAQ_Visualizer")
+        #TABS
+        self.acquire_tab = AcquireTab()
+        self.visualize_tab = VisualizeTab()
+        self.send_data_tab = SendDataTab()
+        self.multi_freq_tab = MultiFreqTab()
 
-        self.create_widgets()
-        self.main_window.show()
-
-    def create_widgets(self):
         tab_widget = QTabWidget()
-        tab_widget.addTab(self.acquire_window, "Acquire Data")
-        tab_widget.addTab(self.send_data_window, "Send Data")
-        tab_widget.addTab(self.visualize_window, "Visualize")
-        # tab_widget.addTab(self.multi_freq_window, "MULTI-FREQ")
+        tab_widget.addTab(self.acquire_tab, "Acquire Data")
+        tab_widget.addTab(self.send_data_tab, "Send Data")
+        tab_widget.addTab(self.visualize_tab, "Visualize")
         
-        self.main_window.setCentralWidget(tab_widget)
+        #MENU
+        menu = self.menuBar()
+        tools_menu = menu.addMenu("&Tools")
+        convert_files_menu = tools_menu.addMenu("&Convert Files")
+
+        ## ACTIONS
+        to_csv_action = QAction(
+            text="to .csv",
+            parent=convert_files_menu)
+        to_npy_action = QAction(
+            text="to .npy",
+            parent=convert_files_menu)
+        convert_files_menu.addAction(to_csv_action)
+        convert_files_menu.addAction(to_npy_action)
+
+        to_csv_action.triggered.connect(self.convert_tdms_to_csv)
+        to_npy_action.triggered.connect(self.convert_tdms_to_numpy)
+
+        self.setCentralWidget(tab_widget)
+
+    def convert_tdms_to_numpy(self):
+        pass
+
+    def convert_tdms_to_csv(self):
+        pass
 
 
 if __name__ == "__main__":
     app = QApplication([])
-    main_window = QMainWindow()
-    interface = DAQInterface(main_window)
+    w = MainWindow()
+    w.show()
     # interface.main_window.showFullScreen()
     app.exec()
