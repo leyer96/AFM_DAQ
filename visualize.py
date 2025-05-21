@@ -2,6 +2,7 @@ from PySide6.QtWidgets import(
     QCheckBox,
     QComboBox,
     QFileDialog,
+    QGroupBox,
     QHBoxLayout,
     QInputDialog,
     QLabel,
@@ -9,7 +10,6 @@ from PySide6.QtWidgets import(
     QMessageBox,
     QPushButton,
     QProgressBar,
-    QSizePolicy,
     QVBoxLayout,
     QWidget
 )
@@ -73,24 +73,30 @@ class VisualizeTab(QWidget):
             self.pfm_amp2_curve_op,
             self.pfm_phase2_curve_op
             ]
-        # PLOT WIDGETSs
+        # PLOT WIDGETS
+        ## TOPO
         self.topo_cmap_widget = CmapWidget()
-        self.pfm_amp_cmap_widget = CmapWidget()
-        self.pfm_amp2_cmap_widget = CmapWidget()
-        self.pfm_phase_cmap_widget = CmapWidget()
-        self.pfm_phase2_cmap_widget = CmapWidget()
         self.topo_x_profile_widget = ScatterPlotWidget(title="X Profile")
         self.topo_y_profile_widget = ScatterPlotWidget(title="Y Profile")
+        self.topo_3D_window = None
+        ## PFM
+        v_pfm_groupbox = QGroupBox()
+        self.pfm_amp_cmap_widget = CmapWidget()
+        self.pfm_phase_cmap_widget = CmapWidget()
         self.pfm_phase_curve_widget = ScatterPlotWidget(title="Phase Curve")
         self.pfm_amp_curve_widget = ScatterPlotWidget(title="Amp Curve")
-        self.pfm_phase2_curve_widget = ScatterPlotWidget(title="Phase Curve")
-        self.pfm_amp2_curve_widget = ScatterPlotWidget(title="Amp Curve")
-        self.psd_plot_widget = pg.GraphicsLayoutWidget()
-        self.topo_3D_window = None
         self.pfm_3D_amp_window = None
         self.pfm_3D_phase_window = None
+        ## LVPFM
+        l_pfm_groupbox = QGroupBox()
+        self.pfm_amp2_cmap_widget = CmapWidget()
+        self.pfm_phase2_cmap_widget = CmapWidget()
+        self.pfm_phase2_curve_widget = ScatterPlotWidget(title="Phase Curve")
+        self.pfm_amp2_curve_widget = ScatterPlotWidget(title="Amp Curve")
         self.pfm_3D_amp2_window = None
         self.pfm_3D_phase2_window = None
+        ## PSD
+        self.psd_plot_widget = pg.GraphicsLayoutWidget()
         # CONFIG
         self.progress_bar.hide()
         self.study_op.addItems(["Topography", "PFM", "LVPFM" ,"PSD"])
@@ -154,6 +160,7 @@ class VisualizeTab(QWidget):
         x_layout2c = QHBoxLayout()
         x_layout2d = QHBoxLayout()
 
+        ## OPTIONS
         x_layout2.addWidget(self.topo_2D_op)
         x_layout2.addWidget(self.topo_3D_op)
         x_layout2.addWidget(self.topo_profile_line_op)
@@ -170,11 +177,14 @@ class VisualizeTab(QWidget):
         x_layout2d.addWidget(self.pfm_amp2_curve_op)
         x_layout2d.addWidget(self.pfm_phase2_curve_op)
 
+        ## FILE
         x_layout3 = QHBoxLayout()
         x_layout3.addWidget(QLabel("Filename:"))
         x_layout3.addWidget(self.path_input)
         x_layout3.addWidget(self.choose_path_btn)
 
+
+        ## CMAPS + PSD
         x_layout4 = QHBoxLayout()
         x_layout4.addWidget(self.topo_cmap_widget)
         x_layout4.addWidget(self.pfm_amp_cmap_widget)
@@ -183,6 +193,7 @@ class VisualizeTab(QWidget):
         x_layout4.addWidget(self.pfm_phase2_cmap_widget)
         x_layout4.addWidget(self.psd_plot_widget)
         
+        ## PROFILE LINES + PIXEL CURVES
         x_layout5 = QHBoxLayout()
         x_layout5.addWidget(self.topo_x_profile_widget)
         x_layout5.addWidget(self.topo_y_profile_widget)
