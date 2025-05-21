@@ -62,8 +62,8 @@ class VisualizeTab(QWidget):
         self.pfm_2D_phase2_op = QCheckBox("PFM 2D Phase - Lateral") 
         self.pfm_3D_amp2_op = QCheckBox("PFM 3D Amp - Lateral (New Window)")
         self.pfm_3D_phase2_op = QCheckBox("PFM 3D Phase - Lateral (New Window)")
-        self.pfm_amp2_curve_op = QCheckBox("PFM Amp Curve")
-        self.pfm_phase2_curve_op = QCheckBox("PFM Phase Curve")
+        self.pfm_amp2_curve_op = QCheckBox("PFM Amp Curve - Lateral")
+        self.pfm_phase2_curve_op = QCheckBox("PFM Phase Curve - Lateral")
         self.pfm_multifreq_options_btns = [
             *self.pfm_options_btns,
             self.pfm_2D_amp2_op,
@@ -80,7 +80,7 @@ class VisualizeTab(QWidget):
         self.topo_y_profile_widget = ScatterPlotWidget(title="Y Profile")
         self.topo_3D_window = None
         ## PFM
-        v_pfm_groupbox = QGroupBox()
+        self.v_pfm_groupbox = QGroupBox("Vertical")
         self.pfm_amp_cmap_widget = CmapWidget()
         self.pfm_phase_cmap_widget = CmapWidget()
         self.pfm_phase_curve_widget = ScatterPlotWidget(title="Phase Curve")
@@ -88,7 +88,7 @@ class VisualizeTab(QWidget):
         self.pfm_3D_amp_window = None
         self.pfm_3D_phase_window = None
         ## LVPFM
-        l_pfm_groupbox = QGroupBox()
+        self.l_pfm_groupbox = QGroupBox("Lateral")
         self.pfm_amp2_cmap_widget = CmapWidget()
         self.pfm_phase2_cmap_widget = CmapWidget()
         self.pfm_phase2_curve_widget = ScatterPlotWidget(title="Phase Curve")
@@ -113,6 +113,8 @@ class VisualizeTab(QWidget):
         self.pfm_amp_curve_widget.hide()
         self.pfm_amp2_curve_widget.hide()
         self.psd_plot_widget.hide()
+        self.v_pfm_groupbox.hide()
+        self.l_pfm_groupbox.hide()
         for btn in self.pfm_options_btns:
             btn.hide()
         for btn in self.pfm_multifreq_options_btns:
@@ -183,26 +185,41 @@ class VisualizeTab(QWidget):
         x_layout3.addWidget(self.path_input)
         x_layout3.addWidget(self.choose_path_btn)
 
-
         ## CMAPS + PSD
+        ### LVPFM GROUP BOXES
+        #### VERTICAL
+        v_pfm_groupbox_layout = QVBoxLayout()
+        v_gb_l1 = QHBoxLayout()
+        v_gb_l2 = QHBoxLayout()
+        v_gb_l1.addWidget(self.pfm_amp_cmap_widget)
+        v_gb_l1.addWidget(self.pfm_phase_cmap_widget)
+        v_gb_l2.addWidget(self.pfm_amp_curve_widget)
+        v_gb_l2.addWidget(self.pfm_phase_curve_widget)
+        v_pfm_groupbox_layout.addLayout(v_gb_l1)
+        v_pfm_groupbox_layout.addLayout(v_gb_l2)
+        self.v_pfm_groupbox.setLayout(v_pfm_groupbox_layout)
+        ##### LATERAL
+        l_pfm_groupbox_layout = QVBoxLayout()
+        l_gb_l1 = QHBoxLayout()
+        l_gb_l2 = QHBoxLayout()
+        l_gb_l1.addWidget(self.pfm_amp2_cmap_widget)
+        l_gb_l1.addWidget(self.pfm_phase2_cmap_widget)
+        l_gb_l2.addWidget(self.pfm_amp2_curve_widget)
+        l_gb_l2.addWidget(self.pfm_phase2_curve_widget)
+        l_pfm_groupbox_layout.addLayout(l_gb_l1)
+        l_pfm_groupbox_layout.addLayout(l_gb_l2)
+        self.l_pfm_groupbox.setLayout(l_pfm_groupbox_layout)
+
         x_layout4 = QHBoxLayout()
         x_layout4.addWidget(self.topo_cmap_widget)
-        x_layout4.addWidget(self.pfm_amp_cmap_widget)
-        x_layout4.addWidget(self.pfm_phase_cmap_widget)
-        x_layout4.addWidget(self.pfm_amp2_cmap_widget)
-        x_layout4.addWidget(self.pfm_phase2_cmap_widget)
         x_layout4.addWidget(self.psd_plot_widget)
+        x_layout4.addWidget(self.v_pfm_groupbox)
+        x_layout4.addWidget(self.l_pfm_groupbox)
         
-        ## PROFILE LINES + PIXEL CURVES
+        ## TOPO PROFILE LINES
         x_layout5 = QHBoxLayout()
         x_layout5.addWidget(self.topo_x_profile_widget)
         x_layout5.addWidget(self.topo_y_profile_widget)
-        x_layout5.addWidget(self.pfm_amp_curve_widget)
-        x_layout5.addWidget(self.pfm_phase_curve_widget)
-        x_layout5.addWidget(self.pfm_amp2_curve_widget)
-        x_layout5.addWidget(self.pfm_phase2_curve_widget)
-
-        x_layout6 = QHBoxLayout()
 
         layout.addLayout(x_layout1)
         layout.addLayout(x_layout2)
@@ -214,7 +231,6 @@ class VisualizeTab(QWidget):
         layout.addWidget(self.progress_bar)
         layout.addLayout(x_layout4)
         layout.addLayout(x_layout5)
-        layout.addLayout(x_layout6)
         self.setLayout(layout)
 
         
@@ -239,6 +255,8 @@ class VisualizeTab(QWidget):
                     btn.hide()
                     btn.setChecked(False)
         self.psd_plot_widget.show() if index == 3 else self.psd_plot_widget.hide()
+        self.v_pfm_groupbox.show() if index == 1 or index == 2 else self.v_pfm_groupbox.hide()
+        self.l_pfm_groupbox.show() if index == 2 else self.l_pfm_groupbox.hide()
     
     def get_pathname(self):
         path_data = QFileDialog.getOpenFileName(caption=f"SELECT {self.study_op.currentText()} DATAFILE")
@@ -287,7 +305,7 @@ class VisualizeTab(QWidget):
             if self.topo_2D_op.isChecked():
                 self.topo_cmap_widget.setup_widget(Z)
             if self.topo_3D_op.isChecked():
-                self.topo_3D_window = SurfacePlotWindowMatplot(Z,xlabel="Pixel",ylabel="Pixel",zlabel=zlabel_3d)
+                self.topo_3D_window = SurfacePlotWindowMatplot(Z,title="Topography",xlabel="Pixel",ylabel="Pixel",zlabel=zlabel_3d)
                 self.topo_3D_window.show()
         elif op == "PFM":
             amp_and_phase = data
@@ -298,10 +316,15 @@ class VisualizeTab(QWidget):
             if self.pfm_2D_phase_op.isChecked():
                 self.pfm_phase_cmap_widget.setup_widget(phase)
             if self.pfm_3D_amp_op.isChecked():
-                self.pfm_3D_amp_window = SurfacePlotWindowMatplot(amp)
+                self.pfm_3D_amp_window = SurfacePlotWindowMatplot(
+                    amp,
+                    title="Amplitude Image",
+                    xlabel="Pixel",ylabel="Pixel",zlabel="Amplitude (V)")
                 self.pfm_3D_amp_window.show()
             if self.pfm_3D_phase_op.isChecked():
-                self.pfm_3D_phase_window = SurfacePlotWindowMatplot(phase)
+                self.pfm_3D_phase_window = SurfacePlotWindowMatplot(
+                    phase,
+                    title="Phase Image",xlabel="Pixel",ylabel="Pixel",zlabel="Phase (Deg.)")
                 self.pfm_3D_phase_window.show()
         elif op == "LVPFM":
             amps_and_phases = data
@@ -314,20 +337,31 @@ class VisualizeTab(QWidget):
             if self.pfm_2D_phase_op.isChecked():
                 self.pfm_phase_cmap_widget.setup_widget(phase)
             if self.pfm_3D_amp_op.isChecked():
-                self.pfm_3D_amp_window = SurfacePlotWindowMatplot(amp)
+                self.pfm_3D_amp_window = SurfacePlotWindowMatplot(
+                    amp,
+                    title="Amplitude Image",
+                    xlabel="Pixel",ylabel="Pixel",zlabel="Amplitude (V)")
                 self.pfm_3D_amp_window.show()
             if self.pfm_3D_phase_op.isChecked():
-                self.pfm_3D_phase_window = SurfacePlotWindowMatplot(phase)
+                self.pfm_3D_phase_window = SurfacePlotWindowMatplot(
+                    phase,
+                    title="Phase Image",xlabel="Pixel",ylabel="Pixel",zlabel="Phase (Deg.)")
                 self.pfm_3D_phase_window.show()
             if self.pfm_2D_amp2_op.isChecked():
                 self.pfm_amp2_cmap_widget.setup_widget(amp2)
             if self.pfm_2D_phase2_op.isChecked():
                 self.pfm_phase2_cmap_widget.setup_widget(phase2)
             if self.pfm_3D_amp2_op.isChecked():
-                self.pfm_3D_amp2_window = SurfacePlotWindowMatplot(amp2)
+                self.pfm_3D_amp2_window = SurfacePlotWindowMatplot(
+                    amp2,
+                    title="Amplitude Image (Lateral)",
+                    xlabel="Pixel",ylabel="Pixel",zlabel="Amplitude (V)")
                 self.pfm_3D_amp2_window.show()
             if self.pfm_3D_phase2_op.isChecked():
-                self.pfm_3D_phase2_window = SurfacePlotWindowMatplot(phase2)
+                self.pfm_3D_phase2_window = SurfacePlotWindowMatplot(
+                    phase2,
+                    title="Phase Image (Lateral)",
+                    xlabel="Pixel",ylabel="Pixel",zlabel="Amplitude (V)")
                 self.pfm_3D_phase2_window.show()
         elif op == "PSD":
             frequencies = data["fs"]

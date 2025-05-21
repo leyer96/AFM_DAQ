@@ -105,34 +105,11 @@ class CmapWidget(pg.ImageView):
         image = self.image * sensitivity_rate
         self.setup_widget(image)
 
-
-class SurfacePlotDialog(QDialog):
-    def __init__(self,Z,parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("3D Surface Plot")
-        self.resize(500, 500)
-        
-        self.gl_widget = gl.GLViewWidget()
-
-        layout = QVBoxLayout()
-        layout.addWidget(self.gl_widget)
-        self.setLayout(layout)
-        
-        x = np.arange(Z.shape[1])
-        y = np.arange(Z.shape[0])
-        Z_min, Z_max = Z.min(), Z.max()
-        Z_norm = (Z - Z_min) / (Z_max - Z_min)
-        cmap = cm.get_cmap("YlOrBr")
-        colors = cmap(Z_norm)[:, :, :3]
-        
-        surface = gl.GLSurfacePlotItem(x=x,y=y,z=Z,colors=colors)
-        surface.setGLOptions("opaque")
-        self.gl_widget.addItem(surface)
-
 class SurfacePlotWindowMatplot(QWidget):
     def __init__(self, Z,title="",xlabel="",ylabel="",zlabel=""):
         super().__init__()
         self.setMinimumSize(500,500)
+        self.setWindowTitle(title)
         self.fig = Figure(figsize=(5,3))
         self.fig_canvas = FigureCanvas(self.fig)
         self.fig_canvas.setParent(self)
@@ -151,7 +128,6 @@ class SurfacePlotWindowMatplot(QWidget):
 
     def setup_widget(self):
         ax = self.fig_canvas.figure.add_subplot(111,projection="3d")
-        ax.set_title(self.title)
         ax.set_xlabel(self.xlabel)
         ax.set_ylabel(self.ylabel)
         ax.set_zlabel(self.zlabel)
@@ -161,7 +137,8 @@ class SurfacePlotWindowMatplot(QWidget):
         if self.Z.ndim == 3:
             self.Z = self.Z[:,:,0]
         self.surf = ax.plot_surface(self.X,self.Y,self.Z,cmap=cm.YlOrBr)
-        self.fig.colorbar(self.surf,shrink=0.5,aspect=5)
+        cbar_ax = self.fig.add_axes([0.25, 0.88, 0.5, 0.04])
+        self.fig.colorbar(self.surf, cax=cbar_ax, orientation='horizontal')
 
     def detrend_image(self):
         self.prev_img = self.Z.copy()
