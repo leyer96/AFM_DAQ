@@ -1,15 +1,17 @@
 from PySide6.QtWidgets import (
     QApplication,
+    QMessageBox,
+    QFileDialog,
     QMainWindow,
     QTabWidget,
 )
+from PySide6.QtCore import QThreadPool
 from PySide6.QtGui import QAction
 from acquire import AcquireTab
 from visualize import VisualizeTab
 from send import SendDataTab
 from multi_freq import MultiFreqTab
-from matplotlib.backends.backend_qtagg import FigureCanvas
-from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
+from workers import ConverterWorker
 
 
 class MainWindow(QMainWindow):
@@ -44,8 +46,8 @@ class MainWindow(QMainWindow):
         convert_files_menu.addAction(to_csv_action)
         convert_files_menu.addAction(to_npy_action)
 
-        to_csv_action.triggered.connect(self.convert_tdms_to_csv)
-        to_npy_action.triggered.connect(self.convert_tdms_to_numpy)
+        to_csv_action.triggered.connect(lambda: self.convert_tdms("csv"))
+        to_npy_action.triggered.connect(lambda: self.convert_tdms("npy"))
         ## IMAGE
         detrend_image_action = QAction(
             text="Detrend image",
@@ -64,13 +66,21 @@ class MainWindow(QMainWindow):
         go_back_image_action.triggered.connect(self.visualize_tab.go_back)
         convert_V_to_nm.triggered.connect(self.visualize_tab.add_sensitivity_rate)
 
+        # THREADPOOL
+        self.threadpool = QThreadPool()
+
         self.setCentralWidget(tab_widget)
 
-    def convert_tdms_to_numpy(self):
-        pass
-
-    def convert_tdms_to_csv(self):
-        pass
+    def convert_tdms(self, mode="csv"):
+        file,_ = QFileDialog.getOpenFileName(self,caption="Select File to Convert")
+        if file:
+            target = QFileDialog.getExistingDirectory(self, caption="Select Target Folder")
+            if target:
+                worker = ConverterWorker(file,target,mode=mode)
+                self.threadpool.start(worker)
+                dlg = QMessageBox.information(self,"Status", "Converting... (you can close this dialog)")
+                worker.signals.finished.connect(lambda: QMessageBox.information(self,"Status", "Succesfully converted file"))
+                worker.signals.error.connect(lambda: QMessageBox.warning(self,"Status", "Error while converted file"))
 
 
 if __name__ == "__main__":
