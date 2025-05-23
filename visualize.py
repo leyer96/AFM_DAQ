@@ -361,7 +361,7 @@ class VisualizeTab(QWidget):
                 self.pfm_3D_phase2_window = SurfacePlotWindowMatplot(
                     phase2,
                     title="Phase Image (Lateral)",
-                    xlabel="Pixel",ylabel="Pixel",zlabel="Amplitude (V)")
+                    xlabel="Pixel",ylabel="Pixel",zlabel="Phase (Deg.)")
                 self.pfm_3D_phase2_window.show()
         elif op == "PSD":
             frequencies = data["fs"]
@@ -378,6 +378,7 @@ class VisualizeTab(QWidget):
             psd_plot.setLabel('left', 'Amplitude', units='V')
         self.study_op.setEnabled(True)
         self.choose_path_btn.setEnabled(True)
+        self.progress_bar.setValue(0)
 
     def detrend_data(self):
         try:
