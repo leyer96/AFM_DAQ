@@ -127,6 +127,7 @@ class SurfacePlotWindowMatplot(QWidget):
         self.setup_widget()
 
     def setup_widget(self):
+        self.fig.clear()
         ax = self.fig_canvas.figure.add_subplot(111,projection="3d")
         ax.set_xlabel(self.xlabel)
         ax.set_ylabel(self.ylabel)
@@ -139,11 +140,11 @@ class SurfacePlotWindowMatplot(QWidget):
         self.surf = ax.plot_surface(self.X,self.Y,self.Z,cmap=cm.YlOrBr)
         cbar_ax = self.fig.add_axes([0.25, 0.88, 0.5, 0.04])
         self.fig.colorbar(self.surf, cax=cbar_ax, orientation='horizontal')
+        self.fig_canvas.draw()
 
     def detrend_image(self):
         self.prev_img = self.Z.copy()
         self.Z = detrend(self.Z)
-        self.surf.remove()
         self.setup_widget()
 
     def go_back(self):
