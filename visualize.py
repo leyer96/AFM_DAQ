@@ -290,11 +290,13 @@ class VisualizeTab(QWidget):
         self.study_op.setEnabled(True)
         self.choose_path_btn.setEnabled(True)
         self.progress_bar.reset()
+        self.progress_bar.setValue(0)
         self.progress_bar.hide()
         QMessageBox.critical(self, "Processing Error", f"An error ({err}) has occurred while processing the data. Try with a new set.")
     
     def create_plots(self, data):
         self.progress_bar.reset()
+        self.progress_bar.setValue(0)
         self.progress_bar.hide()
         op = self.study_op.currentText()
         if op == "Topography":
@@ -378,7 +380,6 @@ class VisualizeTab(QWidget):
             psd_plot.setLabel('left', 'Amplitude', units='V')
         self.study_op.setEnabled(True)
         self.choose_path_btn.setEnabled(True)
-        self.progress_bar.setValue(0)
 
     def detrend_data(self):
         try:

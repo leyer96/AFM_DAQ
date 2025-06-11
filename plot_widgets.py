@@ -50,7 +50,7 @@ class CmapWidget(pg.ImageView):
         self.h_line.sigPositionChangeFinished.connect(self.handle_h_line_change)
         self.v_line.sigPositionChangeFinished.connect(self.handle_v_line_change)
     
-    def setup_widget(self,img,color="YlOrBr"):
+    def setup_widget(self,img,color="YlOrBr_r"):
         self.image = img
         self.n_dim = img.ndim
         if self.n_dim == 2:

@@ -38,7 +38,7 @@ class BaseWorker(QRunnable):
         res = line_indexes.size//2
         # PIXEL
         pixel_indexes = np.array([
-            np.round(np.linspace(np.min([s,e]) + int(np.abs(e-s)*0.1), np.max([s,e]), res + 1)).astype(int)
+            np.round(np.linspace(np.min([s,e]) + int(np.abs(e-s)*0.075), np.max([s,e]), res + 1)).astype(int)
             for s, e in line_indexes])
         parsed_data = {
             "fs": fs,

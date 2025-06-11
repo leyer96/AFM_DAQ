@@ -72,6 +72,8 @@ class AcquireTab(QWidget):
         self.n_samples_input.setRange(0,1.5E6)
         self.n_samples_input.setValue(40_000)
         self.n_samples_input.setGroupSeparatorShown(True)
+        self.terminal_config_input = QComboBox()
+        self.terminal_config_input.addItems(["DIFF", "RSE"])
         ## ICONS
         self.record_btn.setIcon(QIcon(Paths.icon("control-record.png")))
         stop_btn.setIcon(QIcon(Paths.icon("control-stop-square.png")))
@@ -98,6 +100,7 @@ class AcquireTab(QWidget):
         f2.addRow("Max. Value (V)", self.max_input_value_input)
         f2.addRow("DAQ Sample Rate (samples/s)", self.sample_rate_input)
         f2.addRow("Number of Samples (samples per read)", self.n_samples_input)
+        f2.addRow("Terminal Cofiguration", self.terminal_config_input)
         daq_config_group_box.setLayout(f2)
         ## MAIN LAYOUT
         layout = QVBoxLayout()
@@ -159,6 +162,7 @@ class AcquireTab(QWidget):
         max_v = self.max_input_value_input.value()
         sample_rate = self.sample_rate_input.value()
         n_samples = self.n_samples_input.value()
+        terminal_config = self.terminal_config_input.currentText()
         self.plot_timer.start(1000)
         self.acquisition_worker = AcquisitionWorker(
             n_channels=n_channels,
@@ -166,7 +170,8 @@ class AcquireTab(QWidget):
             max_v=max_v,
             sample_rate=sample_rate,
             n_samples=n_samples,
-            mode=mode
+            mode=mode,
+            terminal_config=terminal_config
             )
         self.acquisition_worker.signals.data.connect(self.on_new_data)
         self.threadpool.start(self.acquisition_worker)
