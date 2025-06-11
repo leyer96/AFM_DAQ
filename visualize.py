@@ -305,7 +305,7 @@ class VisualizeTab(QWidget):
             self.topo_x_profile_widget.set_ylabel("Height (V)")
             self.topo_y_profile_widget.set_ylabel("Height (V)")
             if self.topo_2D_op.isChecked():
-                self.topo_cmap_widget.setup_widget(Z)
+                self.topo_cmap_widget.setup_widget(-Z)
             if self.topo_3D_op.isChecked():
                 self.topo_3D_window = SurfacePlotWindowMatplot(Z,title="Topography",xlabel="Pixel",ylabel="Pixel",zlabel=zlabel_3d)
                 self.topo_3D_window.show()
